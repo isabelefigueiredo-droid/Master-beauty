@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Master · Beauty ML</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23FFE600'/><text x='6' y='23' font-size='18' fill='%23111'>M</text></svg>"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{height:100%;background:#F7F7F5;font-family:'Inter',sans-serif;}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:#D4D0C8;border-radius:10px;}
+    input,select,textarea{font-family:'Inter',sans-serif;}
+    select{-webkit-appearance:none;appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 10px center;}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef}=React;
+
+/* ─── Storage ─── */
+const DB={
+  get(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null;}catch{return null;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+};
+
+/* ─── Utils ─── */
+const T=()=>new Date().toISOString().split("T")[0];
+const df=(n)=>new Date(Date.now()+n*86400000).toISOString().split("T")[0];
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+const isOv=(d)=>!!d&&d<T();
+const isTd=(d)=>!!d&&d===T();
+const fmtDate=(d)=>d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}):"—";
+const fmtFull=(d)=>d?new Date(d+"T12:00:00").toLocaleDateString("pt-BR"):"—";
+
+/* ─── Seeds ─── */
+const SEEDS={
+  tasks:[
+    {id:"t1",title:"Apresentação Q2 Beauty",type:"projeto",entity:"Beauty Vertical Q2",deadline:df(0),status:"doing",priority:"alta",notes:"Incluir dados de sell-out e GMV por categoria"},
+    {id:"t2",title:"Análise de concorrência skincare",type:"projeto",entity:"Beauty Vertical Q2",deadline:df(5),status:"todo",priority:"media",notes:""},
+    {id:"t3",title:"Brief campanha Dia das Mães",type:"cliente",entity:"L'Oréal Brasil",deadline:df(-1),status:"todo",priority:"alta",notes:"Confirmar verbas com time comercial"},
+    {id:"t4",title:"Revisão de contrato anual",type:"cliente",entity:"L'Oréal Brasil",deadline:df(10),status:"done",priority:"baixa",notes:""},
+    {id:"t5",title:"Deck de sell-in fragrance",type:"cliente",entity:"O Boticário",deadline:df(3),status:"doing",priority:"alta",notes:""},
+    {id:"t6",title:"Mapeamento de sellers beauty",type:"projeto",entity:"Expansão Sellers 26",deadline:df(7),status:"todo",priority:"media",notes:""},
+  ],
+  links:[
+    {id:"l1",title:"Pasta Beauty Q2 — Drive",url:"https://drive.google.com",category:"Arquivos",description:"Apresentações e reports do trimestre"},
+    {id:"l2",title:"Dashboard GMV Beauty",url:"https://datastudio.google.com",category:"Arquivos",description:"Métricas consolidadas"},
+  ],
+  cats:["Arquivos"]
+};
+
+/* ─── Design System ─── */
+const D={
+  // Core
+  yellow:"#FFE600",      // ML yellow — primary action
+  yellowHov:"#F0D800",
+  yellowMid:"#FFF7A0",
+  yellowPale:"#FFFDE0",
+  // Ink
+  ink:"#111111",
+  ink2:"#333333",
+  ink3:"#666666",
+  ink4:"#999999",
+  ink5:"#CCCCCC",
+  // Surface
+  bg:"#F7F7F5",
+  card:"#FFFFFF",
+  cardHov:"#FAFAFA",
+  border:"#E8E8E4",
+  border2:"#F0F0EC",
+  // Sidebar
+  sb:"#18181B",
+  sb2:"#27272A",
+  sb3:"#3F3F46",
+  sbText:"#E4E4E7",
+  sbMuted:"#71717A",
+  // Beauty rose — used sparingly as secondary
+  rose:"#E05080",
+  rosePale:"#FFF0F4",
+  roseBorder:"#FCCDD8",
+  // Status
+  todo:{dot:"#A1A1AA",bg:"#FAFAFA",bdr:"#E8E8E4",badge:"#F4F4F5",btxt:"#52525B"},
+  doing:{dot:"#3B82F6",bg:"#EFF6FF",bdr:"#BFDBFE",badge:"#DBEAFE",btxt:"#1D4ED8"},
+  done:{dot:"#22C55E",bg:"#F0FDF4",bdr:"#BBF7D0",badge:"#DCFCE7",btxt:"#15803D"},
+  // Priority
+  alta:{label:"Alta",bg:"#FEF2F2",c:"#DC2626",dot:"#EF4444"},
+  media:{label:"Média",bg:"#FFFBEB",c:"#B45309",dot:"#F59E0B"},
+  baixa:{label:"Baixa",bg:"#F0FDF4",c:"#15803D",dot:"#22C55E"},
+};
+const STATS={todo:"A Fazer",doing:"Em Andamento",done:"Concluído"};
+const SCOLS=["todo","doing","done"];
+const SW=240;
+
+/* ─── Shared Styles ─── */
+const F="'Inter',sans-serif";
+const inp={width:"100%",padding:"9px 12px",border:`1px solid ${D.border}`,borderRadius:"6px",fontSize:"13px",outline:"none",boxSizing:"border-box",background:D.card,fontFamily:F,color:D.ink,fontWeight:500,lineHeight:1.4};
+const btn={primary:{padding:"9px 18px",background:D.yellow,color:D.ink,border:`1px solid ${D.yellowHov}`,borderRadius:"6px",fontWeight:700,fontSize:"13px",cursor:"pointer",fontFamily:F,letterSpacing:"-0.1px"},
+  ghost:{padding:"9px 16px",background:"transparent",color:D.ink3,border:`1px solid ${D.border}`,borderRadius:"6px",fontWeight:500,fontSize:"13px",cursor:"pointer",fontFamily:F},
+  danger:{padding:"9px 16px",background:"#FEF2F2",color:"#DC2626",border:"1px solid #FECACA",borderRadius:"6px",fontWeight:600,fontSize:"13px",cursor:"pointer",fontFamily:F},
+};
+const lbl={display:"block",fontSize:"11px",fontWeight:600,color:D.ink4,marginBottom:"5px",marginTop:"16px",textTransform:"uppercase",letterSpacing:"0.7px"};
+
+/* ─── Atoms ─── */
+function Badge({children,bg,color,dot,size=11}){
+  return(
+    <span style={{display:"inline-flex",alignItems:"center",gap:"4px",fontSize:`${size}px`,fontWeight:600,background:bg,color,borderRadius:"4px",padding:"2px 7px",whiteSpace:"nowrap"}}>
+      {dot&&<span style={{width:"5px",height:"5px",borderRadius:"50%",background:dot,display:"inline-block",flexShrink:0}}/>}
+      {children}
+    </span>
+  );
+}
+
+function Dot({color,size=8}){
+  return <span style={{width:`${size}px`,height:`${size}px`,borderRadius:"50%",background:color,display:"inline-block",flexShrink:0}}/>;
+}
+
+/* ─── Overlay ─── */
+function Overlay({children,onClose}){
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",backdropFilter:"blur(2px)"}} onClick={onClose}>
+      <div style={{background:D.card,borderRadius:"12px",padding:"32px",width:"560px",maxWidth:"100%",maxHeight:"92vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.15)",border:`1px solid ${D.border}`}} onClick={e=>e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Confirm ─── */
+function Confirm({msg,sub,onYes,onNo}){
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",backdropFilter:"blur(2px)"}} onClick={onNo}>
+      <div style={{background:D.card,borderRadius:"12px",padding:"32px",maxWidth:"360px",width:"100%",textAlign:"center",border:`1px solid ${D.border}`,boxShadow:"0 20px 60px rgba(0,0,0,0.15)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{width:"44px",height:"44px",background:"#FEF2F2",border:"1px solid #FECACA",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",fontSize:"18px"}}>🗑</div>
+        <p style={{fontSize:"17px",fontWeight:700,color:D.ink,margin:"0 0 6px",lineHeight:1.3}}>{msg}</p>
+        {sub&&<p style={{fontSize:"13px",color:D.ink3,margin:"0 0 24px",lineHeight:1.6}}>{sub}</p>}
+        <div style={{display:"flex",gap:"8px"}}>
+          <button onClick={onYes} style={{...btn.danger,flex:1,padding:"10px"}}>Excluir</button>
+          <button onClick={onNo} style={{...btn.ghost,flex:1,padding:"10px"}}>Cancelar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Sidebar Nav Item ─── */
+function NavItem({icon,label,active,onClick,count}){
+  const[h,setH]=useState(false);
+  return(
+    <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
+      style={{display:"flex",alignItems:"center",gap:"8px",width:"100%",padding:"7px 10px",
+        background:active?"rgba(255,230,0,0.15)":h?"rgba(255,255,255,0.04)":"transparent",
+        color:active?D.yellow:h?D.sbText:D.sbMuted,
+        border:"none",borderRadius:"6px",cursor:"pointer",fontFamily:F,
+        fontSize:"13px",fontWeight:active?600:400,textAlign:"left",transition:"all 0.1s"}}>
+      <span style={{fontSize:"14px",lineHeight:1,opacity:active?1:0.7}}>{icon}</span>
+      <span style={{flex:1,letterSpacing:"-0.1px"}}>{label}</span>
+      {count!==undefined&&count>0&&(
+        <span style={{fontSize:"10px",fontWeight:700,background:active?"rgba(255,230,0,0.2)":"rgba(255,255,255,0.08)",color:active?D.yellow:D.sbMuted,borderRadius:"10px",padding:"1px 7px",minWidth:"18px",textAlign:"center"}}>{count}</span>
+      )}
+    </button>
+  );
+}
+
+/* ─── Task Card ─── */
+function TaskCard({task,onEdit}){
+  const ov=task.status!=="done"&&isOv(task.deadline);
+  const td=task.status!=="done"&&isTd(task.deadline);
+  const p=D[task.priority];
+  const m=D[task.status];
+  const[h,setH]=useState(false);
+  return(
+    <div onClick={()=>onEdit(task)} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
+      style={{background:h?D.cardHov:D.card,borderRadius:"8px",padding:"14px 16px",marginBottom:"6px",cursor:"pointer",
+        border:ov?`1px solid ${D.rose}`:td?`1px solid ${D.yellowHov}`:`1px solid ${D.border}`,
+        boxShadow:h?"0 2px 12px rgba(0,0,0,0.07)":"0 1px 3px rgba(0,0,0,0.04)",
+        transform:h?"translateY(-1px)":"none",transition:"all 0.12s"}}>
+      {ov&&<div style={{fontSize:"10px",fontWeight:700,color:D.rose,marginBottom:"6px",letterSpacing:"0.3px",display:"flex",alignItems:"center",gap:"4px"}}><span>●</span> ATRASADA</div>}
+      {td&&<div style={{display:"inline-flex",alignItems:"center",gap:"4px",fontSize:"10px",fontWeight:700,color:"#7A5800",marginBottom:"6px",background:D.yellow,borderRadius:"3px",padding:"2px 7px",letterSpacing:"0.2px"}}>⏰ HOJE</div>}
+      <div style={{fontWeight:600,fontSize:"13px",color:D.ink,marginBottom:"10px",lineHeight:1.45,letterSpacing:"-0.1px"}}>{task.title}</div>
+      <div style={{display:"flex",gap:"4px",flexWrap:"wrap",alignItems:"center"}}>
+        <Badge bg={task.type==="projeto"?D.yellowPale:"#FFF0F4"} color={task.type==="projeto"?"#7A5800":D.rose}>
+          {task.type==="projeto"?"Projeto":"Cliente"}
+        </Badge>
+        {task.entity&&<Badge bg={D.bg} color={D.ink3}>{task.entity}</Badge>}
+        <Badge bg={p.bg} color={p.c} dot={p.dot}>{p.label}</Badge>
+        {task.deadline&&<span style={{fontSize:"11px",color:ov?D.rose:D.ink4,marginLeft:"auto",fontWeight:500}}>{fmtDate(task.deadline)}</span>}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Entity Card ─── */
+function EntityCard({name,type,tasks,onEditTask,onNewTask,onDeleteEntity}){
+  const[open,setOpen]=useState(false);
+  const[cd,setCd]=useState(false);
+  const counts={todo:0,doing:0,done:0};tasks.forEach(t=>counts[t.status]++);
+  const total=tasks.length,ratio=total?counts.done/total:0;
+  const hasOv=tasks.some(t=>t.status!=="done"&&isOv(t.deadline));
+  const hasTd=tasks.some(t=>t.status!=="done"&&isTd(t.deadline));
+  const isProj=type==="projeto";
+  return(
+    <>
+      {cd&&<Confirm msg={`Excluir "${name}"?`} sub={`${total} tarefa${total!==1?"s":""} vinculada${total!==1?"s":""} serão removidas.`} onYes={()=>{onDeleteEntity(name,type);setCd(false);}} onNo={()=>setCd(false)}/>}
+      <div style={{background:D.card,border:`1px solid ${D.border}`,borderRadius:"10px",overflow:"hidden",marginBottom:"8px",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
+        {/* accent line */}
+        <div style={{height:"2px",background:isProj?D.yellow:`linear-gradient(90deg,${D.rose},#F090B0)`}}/>
+        <div style={{padding:"18px 20px",borderBottom:open?`1px solid ${D.border2}`:"none",cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
+          <div style={{display:"flex",alignItems:"center",gap:"14px"}}>
+            {/* icon */}
+            <div style={{width:"40px",height:"40px",borderRadius:"8px",flexShrink:0,
+              background:isProj?D.yellowPale:D.rosePale,
+              border:`1px solid ${isProj?D.yellowMid:D.roseBorder}`,
+              display:"flex",alignItems:"center",justifyContent:"center",
+              fontSize:"14px",color:isProj?"#7A5800":D.rose,fontWeight:700}}>
+              {isProj?"◆":"◇"}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px",flexWrap:"wrap"}}>
+                <span style={{fontWeight:700,fontSize:"15px",color:D.ink,letterSpacing:"-0.2px"}}>{name}</span>
+                {hasOv&&<Badge bg="#FEF2F2" color="#DC2626">⚠ atrasada</Badge>}
+                {!hasOv&&hasTd&&<Badge bg={D.yellow} color="#7A5800">⏰ hoje</Badge>}
+              </div>
+              <div style={{display:"flex",gap:"14px"}}>
+                {SCOLS.map(s=><span key={s} style={{fontSize:"12px",color:D.ink4,display:"flex",alignItems:"center",gap:"4px"}}>
+                  <Dot color={D[s].dot} size={6}/>{counts[s]} {STATS[s]}
+                </span>)}
+              </div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:"10px",flexShrink:0}}>
+              <span style={{fontSize:"13px",fontWeight:600,color:D.ink3}}>{Math.round(ratio*100)}%</span>
+              <button onClick={e=>{e.stopPropagation();setCd(true);}}
+                style={{...btn.danger,padding:"5px 10px",fontSize:"11px",display:"flex",alignItems:"center",gap:"3px"}}
+                onMouseEnter={e=>e.currentTarget.style.background="#FECACA"}
+                onMouseLeave={e=>e.currentTarget.style.background="#FEF2F2"}>🗑 Excluir</button>
+              <span style={{color:D.ink4,fontSize:"14px",display:"inline-block",transform:open?"rotate(90deg)":"none",transition:"transform 0.15s",fontWeight:300}}>›</span>
+            </div>
+          </div>
+          {/* progress */}
+          <div style={{marginTop:"12px",height:"3px",background:D.border2,borderRadius:"3px",overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${ratio*100}%`,background:isProj?D.yellow:D.rose,borderRadius:"3px",transition:"width 0.4s ease"}}/>
+          </div>
+        </div>
+        {open&&(
+          <div style={{padding:"12px 20px 18px",background:D.bg}}>
+            {tasks.length===0
+              ?<p style={{color:D.ink4,fontSize:"13px",textAlign:"center",padding:"14px 0",margin:0}}>Nenhuma tarefa ainda.</p>
+              :tasks.map(t=>{
+                const ov=t.status!=="done"&&isOv(t.deadline);
+                const td=t.status!=="done"&&isTd(t.deadline);
+                const p=D[t.priority],m=D[t.status];
+                return(
+                  <div key={t.id} onClick={()=>onEditTask(t)}
+                    style={{display:"flex",alignItems:"center",gap:"10px",padding:"9px 0",borderBottom:`1px solid ${D.border2}`,cursor:"pointer"}}>
+                    <Dot color={m.dot}/>
+                    <span style={{flex:1,fontSize:"13px",fontWeight:500,color:D.ink,minWidth:0,letterSpacing:"-0.1px"}}>
+                      {ov&&<span style={{color:"#DC2626",marginRight:"4px",fontSize:"10px"}}>⚠</span>}
+                      {td&&<span style={{color:"#7A5800",marginRight:"4px",fontSize:"10px"}}>⏰</span>}
+                      {t.title}
+                    </span>
+                    <Badge bg={m.badge} color={m.btxt}>{STATS[t.status]}</Badge>
+                    <Badge bg={p.bg} color={p.c} dot={p.dot}>{p.label}</Badge>
+                    {t.deadline&&<span style={{fontSize:"11px",color:D.ink4,flexShrink:0}}>{fmtDate(t.deadline)}</span>}
+                  </div>
+                );
+              })}
+            <button onClick={()=>onNewTask({type,entity:name})} style={{...btn.ghost,marginTop:"12px",fontSize:"12px",padding:"6px 12px"}}>+ Adicionar tarefa</button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ─── Task Modal ─── */
+function TaskModal({task,prefill,onSave,onClose,onDelete,entities}){
+  const isNew=!task?.id;
+  const[f,setF]=useState(task||{title:"",type:"projeto",entity:"",deadline:"",status:"todo",priority:"media",notes:"",...(prefill||{})});
+  const[cd,setCd]=useState(false);
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const entList=entities[f.type]||[];
+  return(
+    <>
+      {cd&&<Confirm msg="Excluir esta tarefa?" sub={`"${f.title}" será removida.`} onYes={()=>onDelete(task.id)} onNo={()=>setCd(false)}/>}
+      <Overlay onClose={onClose}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:"24px",gap:"12px"}}>
+          <div>
+            <h2 style={{fontSize:"20px",fontWeight:800,margin:"0 0 3px",color:D.ink,letterSpacing:"-0.3px"}}>{isNew?"Nova Tarefa":"Editar Tarefa"}</h2>
+            <p style={{margin:0,fontSize:"12px",color:D.ink4,fontWeight:400}}>{isNew?"Preencha os detalhes abaixo":"Atualize as informações"}</p>
+          </div>
+          {!isNew&&<button onClick={()=>setCd(true)} style={{...btn.danger,flexShrink:0,fontSize:"12px",padding:"7px 12px"}}>🗑 Excluir</button>}
+        </div>
+        <label style={lbl}>Título</label>
+        <input style={inp} value={f.title} onChange={e=>set("title",e.target.value)} placeholder="Ex: Deck de sell-in fragrance" autoFocus/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
+          <div><label style={lbl}>Tipo</label>
+            <select style={{...inp,paddingRight:"28px"}} value={f.type} onChange={e=>set("type",e.target.value)}>
+              <option value="projeto">Projeto</option>
+              <option value="cliente">Cliente</option>
+            </select>
+          </div>
+          <div><label style={lbl}>{f.type==="projeto"?"Projeto":"Cliente"}</label>
+            <input style={inp} value={f.entity} onChange={e=>set("entity",e.target.value)} placeholder={f.type==="projeto"?"Ex: Beauty Vertical Q2":"Ex: L'Oréal"} list="ent-dl"/>
+            <datalist id="ent-dl">{entList.map(e=><option key={e} value={e}/>)}</datalist>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px"}}>
+          <div><label style={lbl}>Status</label>
+            <select style={{...inp,paddingRight:"28px"}} value={f.status} onChange={e=>set("status",e.target.value)}>
+              {Object.entries(STATS).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div><label style={lbl}>Prioridade</label>
+            <select style={{...inp,paddingRight:"28px"}} value={f.priority} onChange={e=>set("priority",e.target.value)}>
+              <option value="alta">Alta</option>
+              <option value="media">Média</option>
+              <option value="baixa">Baixa</option>
+            </select>
+          </div>
+          <div><label style={lbl}>Prazo</label>
+            <input style={inp} type="date" value={f.deadline} onChange={e=>set("deadline",e.target.value)}/>
+          </div>
+        </div>
+        <label style={lbl}>Notas</label>
+        <textarea style={{...inp,height:"80px",resize:"vertical",lineHeight:1.6}} value={f.notes} onChange={e=>set("notes",e.target.value)} placeholder="Contexto, links, observações..."/>
+        <div style={{display:"flex",gap:"8px",marginTop:"24px"}}>
+          <button onClick={()=>f.title.trim()&&onSave({...f,id:f.id||uid()})} style={{...btn.primary,flex:1,padding:"11px"}} onMouseEnter={e=>e.currentTarget.style.background=D.yellowHov} onMouseLeave={e=>e.currentTarget.style.background=D.yellow}>Salvar</button>
+          <button onClick={onClose} style={{...btn.ghost,flex:1,padding:"11px"}}>Cancelar</button>
+        </div>
+      </Overlay>
+    </>
+  );
+}
+
+/* ─── Link Modal ─── */
+function LinkModal({onSave,onClose,cats}){
+  const[f,setF]=useState({title:"",url:"",category:cats[0]||"Arquivos",description:""});
+  const[nc,setNc]=useState("");const[addC,setAddC]=useState(false);
+  const set=(k,v)=>setF(p=>({...p,[k]:v}));
+  const ok=()=>{if(nc.trim()){set("category",nc.trim());setNc("");setAddC(false);}};
+  return(
+    <Overlay onClose={onClose}>
+      <h2 style={{fontSize:"20px",fontWeight:800,margin:"0 0 3px",color:D.ink,letterSpacing:"-0.3px"}}>Novo Link</h2>
+      <p style={{margin:"0 0 20px",fontSize:"12px",color:D.ink4}}>Adicione ao seu diretório</p>
+      <label style={lbl}>Título</label>
+      <input style={inp} value={f.title} onChange={e=>set("title",e.target.value)} placeholder="Ex: Dashboard GMV Beauty" autoFocus/>
+      <label style={lbl}>URL</label>
+      <input style={inp} value={f.url} onChange={e=>set("url",e.target.value)} placeholder="https://..."/>
+      <label style={lbl}>Categoria</label>
+      <div style={{display:"flex",gap:"8px"}}>
+        <select style={{...inp,flex:1,paddingRight:"28px"}} value={f.category} onChange={e=>set("category",e.target.value)}>
+          {cats.map(c=><option key={c} value={c}>{c}</option>)}
+        </select>
+        <button onClick={()=>setAddC(a=>!a)} style={{...btn.ghost,padding:"9px 13px",flexShrink:0}}>+</button>
+      </div>
+      {addC&&<div style={{display:"flex",gap:"8px",marginTop:"8px"}}>
+        <input style={{...inp,flex:1}} value={nc} onChange={e=>setNc(e.target.value)} placeholder="Nova categoria..." onKeyDown={e=>e.key==="Enter"&&ok()}/>
+        <button onClick={ok} style={{...btn.primary,padding:"9px 14px"}} onMouseEnter={e=>e.currentTarget.style.background=D.yellowHov} onMouseLeave={e=>e.currentTarget.style.background=D.yellow}>OK</button>
+      </div>}
+      <label style={lbl}>Descrição</label>
+      <input style={inp} value={f.description} onChange={e=>set("description",e.target.value)} placeholder="Opcional"/>
+      <div style={{display:"flex",gap:"8px",marginTop:"24px"}}>
+        <button onClick={()=>f.title.trim()&&f.url.trim()&&onSave({...f,id:uid()},nc.trim()||null)} style={{...btn.primary,flex:1,padding:"11px"}} onMouseEnter={e=>e.currentTarget.style.background=D.yellowHov} onMouseLeave={e=>e.currentTarget.style.background=D.yellow}>Salvar</button>
+        <button onClick={onClose} style={{...btn.ghost,flex:1,padding:"11px"}}>Cancelar</button>
+      </div>
+    </Overlay>
+  );
+}
+
+/* ─── Link Card ─── */
+function LinkCard({link,onDelete}){
+  const[h,setH]=useState(false);const[cd,setCd]=useState(false);
+  return(
+    <>
+      {cd&&<Confirm msg={`Excluir "${link.title}"?`} onYes={()=>onDelete(link.id)} onNo={()=>setCd(false)}/>}
+      <div onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)}
+        style={{background:h?D.cardHov:D.card,borderRadius:"8px",padding:"16px",border:`1px solid ${D.border}`,display:"flex",flexDirection:"column",gap:"10px",boxShadow:h?"0 2px 10px rgba(0,0,0,0.07)":"0 1px 3px rgba(0,0,0,0.04)",transition:"all 0.12s"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:"8px"}}>
+          <a href={link.url} target="_blank" rel="noopener noreferrer" style={{fontWeight:600,fontSize:"13px",color:D.ink,textDecoration:"none",lineHeight:1.45,letterSpacing:"-0.1px"}} onClick={e=>e.stopPropagation()}>
+            <span style={{color:D.ink4,marginRight:"6px"}}>↗</span>{link.title}
+          </a>
+          <button onClick={()=>setCd(true)} style={{...btn.danger,padding:"3px 8px",fontSize:"11px",flexShrink:0,borderRadius:"4px"}} onMouseEnter={e=>e.currentTarget.style.background="#FECACA"} onMouseLeave={e=>e.currentTarget.style.background="#FEF2F2"}>🗑</button>
+        </div>
+        {link.description&&<p style={{fontSize:"12px",color:D.ink3,margin:0,lineHeight:1.6}}>{link.description}</p>}
+        {link.category&&<Badge bg={D.yellowPale} color="#7A5800">{link.category}</Badge>}
+      </div>
+    </>
+  );
+}
+
+/* ─── Calendar ─── */
+function CalendarView({tasks,onEdit,onNew}){
+  const now=new Date();
+  const[year,setYear]=useState(now.getFullYear());
+  const[month,setMonth]=useState(now.getMonth());
+  const monthName=new Date(year,month,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+  const firstDay=(new Date(year,month,1).getDay()+6)%7;
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const prevM=()=>{if(month===0){setMonth(11);setYear(y=>y-1);}else setMonth(m=>m-1);};
+  const nextM=()=>{if(month===11){setMonth(0);setYear(y=>y+1);}else setMonth(m=>m+1);};
+  const byDay={};
+  tasks.forEach(t=>{
+    if(!t.deadline)return;
+    const d=new Date(t.deadline+"T12:00:00");
+    if(d.getFullYear()===year&&d.getMonth()===month){
+      const n=d.getDate();
+      if(!byDay[n])byDay[n]=[];
+      byDay[n].push(t);
+    }
+  });
+  const isToday=(d)=>{const n=new Date();return d===n.getDate()&&month===n.getMonth()&&year===n.getFullYear();};
+  const DAYS=["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
+  const cells=[];
+  for(let i=0;i<firstDay;i++)cells.push(null);
+  for(let d=1;d<=daysInMonth;d++)cells.push(d);
+  return(
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"20px"}}>
+        <h3 style={{fontSize:"16px",fontWeight:700,color:D.ink,letterSpacing:"-0.2px",textTransform:"capitalize"}}>{monthName}</h3>
+        <div style={{display:"flex",gap:"6px"}}>
+          <button onClick={prevM} style={{...btn.ghost,padding:"6px 12px",fontSize:"14px"}}>‹</button>
+          <button onClick={()=>{setYear(now.getFullYear());setMonth(now.getMonth());}} style={{...btn.ghost,padding:"6px 12px",fontSize:"12px"}}>Hoje</button>
+          <button onClick={nextM} style={{...btn.ghost,padding:"6px 12px",fontSize:"14px"}}>›</button>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"4px",marginBottom:"4px"}}>
+        {DAYS.map(d=><div key={d} style={{textAlign:"center",fontSize:"11px",fontWeight:600,color:D.ink4,padding:"6px 0",letterSpacing:"0.3px"}}>{d}</div>)}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:"4px"}}>
+        {cells.map((day,i)=>{
+          if(!day)return<div key={`e${i}`}/>;
+          const dt=byDay[day]||[];
+          const today=isToday(day);
+          const hasOv=dt.some(t=>t.status!=="done"&&isOv(t.deadline));
+          return(
+            <div key={day}
+              style={{minHeight:"90px",background:today?D.yellow:D.card,borderRadius:"8px",padding:"8px",
+                border:today?`1px solid ${D.yellowHov}`:hasOv?`1px solid #FECACA`:`1px solid ${D.border}`,
+                cursor:"pointer",transition:"all 0.12s",boxShadow:today?"0 2px 8px rgba(255,230,0,0.4)":"0 1px 3px rgba(0,0,0,0.03)"}}
+              onClick={()=>dt.length===0&&onNew({deadline:`${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`})}>
+              <div style={{fontSize:"12px",fontWeight:today?800:600,color:today?D.ink:D.ink2,marginBottom:"5px"}}>{day}</div>
+              {dt.slice(0,3).map(t=>{
+                const ov=t.status!=="done"&&isOv(t.deadline);
+                const m=D[t.status];
+                return(
+                  <div key={t.id} onClick={e=>{e.stopPropagation();onEdit(t);}}
+                    style={{fontSize:"10px",fontWeight:600,color:ov?"#DC2626":m.btxt,background:ov?"#FEF2F2":m.badge,borderRadius:"3px",padding:"2px 5px",marginBottom:"2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",lineHeight:1.4}}>
+                    {t.title}
+                  </div>
+                );
+              })}
+              {dt.length>3&&<div style={{fontSize:"9px",fontWeight:700,color:D.ink4}}>+{dt.length-3}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Notifications ─── */
+function notifyAlerts(tasks){
+  if(!("Notification"in window)){alert("Navegador não suporta notificações.");return;}
+  Notification.requestPermission().then(p=>{
+    if(p!=="granted")return;
+    const ov=tasks.filter(t=>t.status!=="done"&&isOv(t.deadline));
+    const td=tasks.filter(t=>t.status!=="done"&&isTd(t.deadline));
+    if(ov.length)new Notification("⚠ Tarefas atrasadas",{body:ov.map(t=>t.title).join(", ")});
+    if(td.length)new Notification("⏰ Vence hoje",{body:td.map(t=>t.title).join(", ")});
+    if(!ov.length&&!td.length)new Notification("✅ Tudo em dia",{body:"Nenhuma tarefa pendente ou atrasada."});
+  });
+}
+
+/* ══════════════════════════════
+   APP
+══════════════════════════════ */
+function App(){
+  const[tasks,setTasks]=useState(null);
+  const[links,setLinks]=useState(null);
+  const[cats,setCats]=useState(null);
+  const[tab,setTab]=useState("kanban");
+  const[editTask,setEditTask]=useState(null);
+  const[prefill,setPrefill]=useState(null);
+  const[showTask,setShowTask]=useState(false);
+  const[showLink,setShowLink]=useState(false);
+  const[fType,setFType]=useState("");
+  const[fEnt,setFEnt]=useState("");
+  const[fPrio,setFPrio]=useState("");
+  const[lq,setLq]=useState("");
+  const[lcat,setLcat]=useState("");
+  const[confirmDel,setConfirmDel]=useState(null);
+
+  useEffect(()=>{
+    setTasks(DB.get("v2_tasks")||SEEDS.tasks);
+    setLinks(DB.get("v2_links")||SEEDS.links);
+    setCats(DB.get("v2_cats")||SEEDS.cats);
+  },[]);
+
+  const saveTasks=t=>{setTasks(t);DB.set("v2_tasks",t);};
+  const saveLinks=l=>{setLinks(l);DB.set("v2_links",l);};
+  const saveCats=c=>{setCats(c);DB.set("v2_cats",c);};
+
+  if(!tasks||!links||!cats)return(
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:D.bg}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{width:"40px",height:"40px",background:D.yellow,borderRadius:"10px",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",margin:"0 auto 12px",fontWeight:900,color:D.ink}}>M</div>
+        <div style={{fontSize:"12px",color:D.ink4,fontWeight:500}}>carregando...</div>
+      </div>
+    </div>
+  );
+
+  const entities={
+    projeto:[...new Set(tasks.filter(t=>t.type==="projeto").map(t=>t.entity).filter(Boolean))],
+    cliente:[...new Set(tasks.filter(t=>t.type==="cliente").map(t=>t.entity).filter(Boolean))],
+  };
+  const allEnts=[...new Set(tasks.map(t=>t.entity).filter(Boolean))];
+  const ovCount=tasks.filter(t=>t.status!=="done"&&isOv(t.deadline)).length;
+  const tdCount=tasks.filter(t=>t.status!=="done"&&isTd(t.deadline)).length;
+
+  const handleSaveTask=f=>{saveTasks(tasks.some(t=>t.id===f.id)?tasks.map(t=>t.id===f.id?f:t):[...tasks,f]);setShowTask(false);setEditTask(null);setPrefill(null);};
+  const handleDelTask=id=>{saveTasks(tasks.filter(t=>t.id!==id));setShowTask(false);setEditTask(null);setConfirmDel(null);};
+  const handleDelEntity=(name,type)=>saveTasks(tasks.filter(t=>!(t.type===type&&t.entity===name)));
+  const handleSaveLink=(f,nc)=>{const c=nc&&!cats.includes(nc)?[...cats,nc]:cats;saveLinks([...links,f]);saveCats(c);setShowLink(false);};
+  const handleDelLink=id=>saveLinks(links.filter(l=>l.id!==id));
+
+  const openNew=(pre=null)=>{setEditTask(null);setPrefill(pre);setShowTask(true);};
+  const openEdit=t=>{setEditTask(t);setPrefill(null);setShowTask(true);};
+
+  const filtered=tasks.filter(t=>(!fType||t.type===fType)&&(!fEnt||t.entity===fEnt)&&(!fPrio||t.priority===fPrio));
+  const filtLinks=links.filter(l=>{const q=lq.toLowerCase();return(!lcat||l.category===lcat)&&(!q||[l.title,l.category,l.description].some(s=>s?.toLowerCase().includes(q)));});
+
+  const NAV=[
+    {id:"kanban",icon:"⊞",label:"Kanban",count:tasks.filter(t=>t.status==="doing").length},
+    {id:"list",icon:"≡",label:"Lista",count:tasks.length},
+    {id:"projetos",icon:"◆",label:"Projetos",count:entities.projeto.length},
+    {id:"clientes",icon:"◇",label:"Clientes",count:entities.cliente.length},
+    {id:"calendario",icon:"◻",label:"Calendário"},
+  ];
+  const tabLabel={kanban:"Kanban",list:"Lista de Tarefas",projetos:"Projetos",clientes:"Clientes",calendario:"Calendário",links:"Links"};
+
+  return(
+    <div style={{minHeight:"100vh",background:D.bg,fontFamily:F,color:D.ink}}>
+
+      {/* ══ SIDEBAR ══ */}
+      <aside style={{position:"fixed",top:0,left:0,width:SW,height:"100vh",background:D.sb,borderRight:`1px solid ${D.sb3}`,overflowY:"auto",zIndex:50,display:"flex",flexDirection:"column"}}>
+
+        {/* Logo */}
+        <div style={{padding:"20px 16px 18px",borderBottom:`1px solid ${D.sb2}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+            <div style={{width:"32px",height:"32px",background:D.yellow,borderRadius:"8px",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,fontSize:"16px",color:D.ink,letterSpacing:"-0.5px",flexShrink:0}}>M</div>
+            <div>
+              <div style={{fontWeight:700,fontSize:"15px",color:D.sbText,letterSpacing:"-0.3px",lineHeight:1}}>Master</div>
+              <div style={{fontSize:"10px",color:D.sbMuted,letterSpacing:"1px",marginTop:"2px",fontWeight:500}}>BEAUTY · ML</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Alerts */}
+        {(ovCount>0||tdCount>0)&&(
+          <div style={{margin:"12px 12px 0",padding:"10px 12px",background:"rgba(255,230,0,0.08)",borderRadius:"6px",border:`1px solid rgba(255,230,0,0.15)`}}>
+            {ovCount>0&&<div style={{fontSize:"11px",fontWeight:600,color:"#FCA5A5",marginBottom:tdCount>0?"3px":0}}>⚠ {ovCount} tarefa{ovCount>1?"s":""} atrasada{ovCount>1?"s":""}</div>}
+            {tdCount>0&&<div style={{fontSize:"11px",fontWeight:600,color:D.yellow}}>⏰ {tdCount} vence{tdCount>1?"m":""} hoje</div>}
+          </div>
+        )}
+
+        {/* Nav */}
+        <div style={{padding:"14px 10px 0"}}>
+          <p style={{fontSize:"10px",fontWeight:600,color:D.sb3,letterSpacing:"0.8px",padding:"0 6px 6px",textTransform:"uppercase",margin:0}}>Tarefas</p>
+          {NAV.map(n=><NavItem key={n.id} {...n} active={tab===n.id} onClick={()=>setTab(n.id)}/>)}
+          <p style={{fontSize:"10px",fontWeight:600,color:D.sb3,letterSpacing:"0.8px",padding:"16px 6px 6px",textTransform:"uppercase",margin:0}}>Diretório</p>
+          <NavItem icon="↗" label="Links Úteis" active={tab==="links"} onClick={()=>setTab("links")} count={links.length}/>
+        </div>
+
+        {/* Notify */}
+        <div style={{padding:"14px 10px 0"}}>
+          <button onClick={()=>notifyAlerts(tasks)}
+            style={{width:"100%",padding:"8px 10px",background:"rgba(255,255,255,0.04)",border:`1px solid ${D.sb2}`,borderRadius:"6px",cursor:"pointer",display:"flex",alignItems:"center",gap:"7px",fontSize:"12px",fontWeight:500,color:D.sbMuted,fontFamily:F,transition:"all 0.1s"}}
+            onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.08)";e.currentTarget.style.color=D.sbText;}}
+            onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.04)";e.currentTarget.style.color=D.sbMuted;}}>
+            🔔 <span>Alertas do navegador</span>
+          </button>
+        </div>
+
+        {/* Stats */}
+        <div style={{marginTop:"auto",padding:"16px 12px 20px"}}>
+          <div style={{background:"rgba(255,255,255,0.04)",borderRadius:"8px",padding:"14px",border:`1px solid ${D.sb2}`}}>
+            <p style={{fontSize:"10px",fontWeight:600,color:D.sb3,letterSpacing:"0.8px",textTransform:"uppercase",margin:"0 0 10px"}}>Resumo</p>
+            {SCOLS.map(s=>{const n=tasks.filter(t=>t.status===s).length;return(
+              <div key={s} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"7px"}}>
+                <span style={{display:"flex",alignItems:"center",gap:"6px",fontSize:"12px",color:D.sbMuted}}>
+                  <Dot color={D[s].dot} size={6}/>{STATS[s]}
+                </span>
+                <span style={{fontWeight:700,fontSize:"12px",color:D.sbText}}>{n}</span>
+              </div>
+            );})}
+            <div style={{height:"1px",background:D.sb2,margin:"10px 0"}}/>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:"5px"}}>
+              <span style={{fontSize:"12px",color:D.sbMuted}}>Projetos</span>
+              <span style={{fontSize:"11px",fontWeight:700,background:"rgba(255,230,0,0.15)",color:D.yellow,borderRadius:"4px",padding:"1px 7px"}}>{entities.projeto.length}</span>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between"}}>
+              <span style={{fontSize:"12px",color:D.sbMuted}}>Clientes</span>
+              <span style={{fontSize:"11px",fontWeight:700,background:"rgba(224,80,128,0.15)",color:"#F090B0",borderRadius:"4px",padding:"1px 7px"}}>{entities.cliente.length}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* ══ MAIN ══ */}
+      <div style={{marginLeft:SW}}>
+
+        {/* Top Bar */}
+        <header style={{background:D.card,borderBottom:`1px solid ${D.border}`,padding:"0 32px",height:"56px",display:"flex",alignItems:"center",gap:"14px",position:"sticky",top:0,zIndex:40,boxShadow:"0 1px 0 rgba(0,0,0,0.06)"}}>
+          <h2 style={{fontSize:"17px",fontWeight:700,margin:0,color:D.ink,letterSpacing:"-0.3px",flexShrink:0}}>{tabLabel[tab]}</h2>
+
+          {(tab==="kanban"||tab==="list")&&(
+            <div style={{display:"flex",gap:"6px",marginLeft:"8px"}}>
+              {[
+                {val:fType,set:setFType,opts:[["","Todos os tipos"],["projeto","Projetos"],["cliente","Clientes"]]},
+                {val:fEnt,set:setFEnt,opts:[["","Todas as entidades"],...allEnts.map(e=>[e,e])]},
+                {val:fPrio,set:setFPrio,opts:[["","Todas as prioridades"],["alta","Alta"],["media","Média"],["baixa","Baixa"]]},
+              ].map((s,i)=>(
+                <select key={i} style={{...inp,width:"auto",padding:"5px 28px 5px 10px",fontSize:"12px",color:s.val?D.ink:D.ink3}} value={s.val} onChange={e=>s.set(e.target.value)}>
+                  {s.opts.map(([v,l])=><option key={v} value={v}>{l}</option>)}
+                </select>
+              ))}
+            </div>
+          )}
+
+          {tab==="links"&&(
+            <div style={{display:"flex",gap:"6px",marginLeft:"8px"}}>
+              <div style={{position:"relative"}}>
+                <span style={{position:"absolute",left:"9px",top:"50%",transform:"translateY(-50%)",color:D.ink4,fontSize:"12px",pointerEvents:"none"}}>🔍</span>
+                <input style={{...inp,width:"180px",padding:"5px 10px 5px 28px",fontSize:"12px"}} placeholder="Buscar..." value={lq} onChange={e=>setLq(e.target.value)}/>
+              </div>
+              <select style={{...inp,width:"auto",padding:"5px 28px 5px 10px",fontSize:"12px"}} value={lcat} onChange={e=>setLcat(e.target.value)}>
+                <option value="">Todas as categorias</option>
+                {cats.map(c=><option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          )}
+
+          <div style={{marginLeft:"auto"}}>
+            {tab!=="links"
+              ?<button onClick={()=>openNew()} style={btn.primary} onMouseEnter={e=>e.currentTarget.style.background=D.yellowHov} onMouseLeave={e=>e.currentTarget.style.background=D.yellow}>+ Nova Tarefa</button>
+              :<button onClick={()=>setShowLink(true)} style={{...btn.primary,background:D.rose,borderColor:D.rose,color:"#fff"}} onMouseEnter={e=>e.currentTarget.style.background="#C04070"} onMouseLeave={e=>e.currentTarget.style.background=D.rose}>+ Novo Link</button>
+            }
+          </div>
+        </header>
+
+        {/* Content */}
+        <main style={{padding:"28px 32px"}}>
+
+          {/* KANBAN */}
+          {tab==="kanban"&&(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"16px",alignItems:"start"}}>
+              {SCOLS.map(status=>{
+                const col=filtered.filter(t=>t.status===status),m=D[status];
+                return(
+                  <div key={status} style={{background:m.bg,borderRadius:"10px",padding:"16px",border:`1px solid ${m.bdr}`}}>
+                    <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"14px"}}>
+                      <Dot color={m.dot}/>
+                      <span style={{fontWeight:700,fontSize:"12px",color:D.ink,letterSpacing:"-0.1px"}}>{STATS[status]}</span>
+                      <Badge bg={m.badge} color={m.btxt} size={10}>{col.length}</Badge>
+                    </div>
+                    {col.map(t=><TaskCard key={t.id} task={t} onEdit={openEdit}/>)}
+                    {col.length===0&&<div style={{textAlign:"center",color:D.ink4,fontSize:"12px",padding:"24px 0",fontWeight:500}}>Vazio</div>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* LIST */}
+          {tab==="list"&&(
+            <>
+              {confirmDel&&<Confirm msg="Excluir esta tarefa?" sub={`"${confirmDel.title}" será removida permanentemente.`} onYes={()=>handleDelTask(confirmDel.id)} onNo={()=>setConfirmDel(null)}/>}
+              <div style={{background:D.card,borderRadius:"10px",overflow:"hidden",border:`1px solid ${D.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:"13px"}}>
+                  <thead>
+                    <tr style={{background:D.bg,borderBottom:`1px solid ${D.border}`}}>
+                      {["Tarefa","Tipo","Entidade","Prazo","Status","Prioridade",""].map((h,i)=>(
+                        <th key={i} style={{padding:"10px 16px",textAlign:"left",fontWeight:600,color:D.ink4,fontSize:"11px",textTransform:"uppercase",letterSpacing:"0.5px",whiteSpace:"nowrap"}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(t=>{
+                      const ov=t.status!=="done"&&isOv(t.deadline);
+                      const td=t.status!=="done"&&isTd(t.deadline);
+                      const p=D[t.priority],m=D[t.status];
+                      return(
+                        <tr key={t.id} style={{borderBottom:`1px solid ${D.border2}`,background:ov?"#FEF2F2":td?D.yellowPale:D.card,transition:"background 0.1s"}}
+                          onMouseEnter={e=>{if(!ov&&!td)e.currentTarget.style.background=D.bg;}}
+                          onMouseLeave={e=>{e.currentTarget.style.background=ov?"#FEF2F2":td?D.yellowPale:D.card;}}>
+                          <td style={{padding:"12px 16px",fontWeight:600,color:D.ink,cursor:"pointer",letterSpacing:"-0.1px"}} onClick={()=>openEdit(t)}>
+                            {ov&&<span style={{color:"#DC2626",marginRight:"5px",fontSize:"10px"}}>●</span>}
+                            {td&&<span style={{background:D.yellow,fontSize:"10px",borderRadius:"3px",padding:"1px 5px",marginRight:"6px",fontWeight:700,color:D.ink}}>hoje</span>}
+                            {t.title}
+                          </td>
+                          <td style={{padding:"12px 16px",cursor:"pointer"}} onClick={()=>openEdit(t)}>
+                            <Badge bg={t.type==="projeto"?D.yellowPale:D.rosePale} color={t.type==="projeto"?"#7A5800":D.rose}>
+                              {t.type==="projeto"?"Projeto":"Cliente"}
+                            </Badge>
+                          </td>
+                          <td style={{padding:"12px 16px",color:D.ink3,fontWeight:500,cursor:"pointer"}} onClick={()=>openEdit(t)}>{t.entity||"—"}</td>
+                          <td style={{padding:"12px 16px",color:ov?"#DC2626":D.ink4,fontWeight:ov?600:500,cursor:"pointer"}} onClick={()=>openEdit(t)}>{fmtFull(t.deadline)}</td>
+                          <td style={{padding:"12px 16px",cursor:"pointer"}} onClick={()=>openEdit(t)}><Badge bg={m.badge} color={m.btxt} dot={m.dot}>{STATS[t.status]}</Badge></td>
+                          <td style={{padding:"12px 16px",cursor:"pointer"}} onClick={()=>openEdit(t)}><Badge bg={p.bg} color={p.c} dot={p.dot}>{p.label}</Badge></td>
+                          <td style={{padding:"12px 8px 12px 0",textAlign:"right"}}>
+                            <button onClick={()=>setConfirmDel(t)} style={{...btn.danger,padding:"4px 8px",fontSize:"11px",borderRadius:"5px"}} onMouseEnter={e=>e.currentTarget.style.background="#FECACA"} onMouseLeave={e=>e.currentTarget.style.background="#FEF2F2"}>🗑</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filtered.length===0&&<tr><td colSpan={7} style={{padding:"56px",textAlign:"center",color:D.ink4,fontWeight:500}}>Nenhuma tarefa encontrada</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {/* PROJETOS / CLIENTES */}
+          {(tab==="projetos"||tab==="clientes")&&(()=>{
+            const type=tab==="projetos"?"projeto":"cliente";
+            const ents=entities[type];
+            return(
+              <div>
+                {ents.length===0&&<div style={{textAlign:"center",padding:"80px 0",color:D.ink4,fontSize:"14px"}}>
+                  Nenhum {type} cadastrado ainda.{" "}
+                  <span style={{color:D.ink,cursor:"pointer",fontWeight:700,borderBottom:`2px solid ${D.yellow}`,paddingBottom:"1px"}} onClick={()=>openNew({type})}>Criar primeira tarefa</span>
+                </div>}
+                {ents.map(name=><EntityCard key={name} name={name} type={type} tasks={tasks.filter(t=>t.type===type&&t.entity===name)} onEditTask={openEdit} onNewTask={openNew} onDeleteEntity={handleDelEntity}/>)}
+              </div>
+            );
+          })()}
+
+          {/* CALENDÁRIO */}
+          {tab==="calendario"&&<CalendarView tasks={tasks} onEdit={openEdit} onNew={openNew}/>}
+
+          {/* LINKS */}
+          {tab==="links"&&(()=>{
+            const ac=[...new Set(filtLinks.map(l=>l.category||"Sem categoria"))];
+            if(!ac.length)return<div style={{textAlign:"center",color:D.ink4,padding:"80px 0",fontWeight:500}}>Nenhum link encontrado</div>;
+            return ac.map(cat=>{
+              const cl=filtLinks.filter(l=>(l.category||"Sem categoria")===cat);
+              return(
+                <div key={cat} style={{marginBottom:"36px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"14px"}}>
+                    <h3 style={{fontSize:"14px",fontWeight:700,color:D.ink,margin:0,letterSpacing:"-0.1px"}}>{cat}</h3>
+                    <div style={{flex:1,height:"1px",background:D.border}}/>
+                    <span style={{fontSize:"11px",color:D.ink4,fontWeight:600}}>{cl.length}</span>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:"10px"}}>
+                    {cl.map(l=><LinkCard key={l.id} link={l} onDelete={handleDelLink}/>)}
+                  </div>
+                </div>
+              );
+            });
+          })()}
+
+        </main>
+      </div>
+
+      {showTask&&<TaskModal task={editTask} prefill={prefill} entities={entities} onSave={handleSaveTask} onDelete={handleDelTask} onClose={()=>{setShowTask(false);setEditTask(null);setPrefill(null);}}/>}
+      {showLink&&<LinkModal cats={cats} onSave={handleSaveLink} onClose={()=>setShowLink(false)}/>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
