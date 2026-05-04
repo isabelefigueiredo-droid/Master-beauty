@@ -401,19 +401,20 @@ function TaskModal({task,prefill,onSave,onClose,onDelete,projects,D}){
   </>;
 }
 
-function LinkModal({onSave,onClose,cats,D}){
+function LinkModal({onSave,onClose,cats,link,D}){
   const{btn,inp,lbl}=buildStyles(D);
-  const[f,setF]=useState({title:"",url:"",category:cats[0]||"Arquivos",description:""});
+  const isEdit=!!link;
+  const[f,setF]=useState(link||{title:"",url:"",category:cats[0]||"Arquivos",description:""});
   const[nc,setNc]=useState("");
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
   const save=()=>{
     if(!f.title.trim()||!f.url.trim())return;
     const finalCat=nc.trim()||f.category;
-    onSave({...f,category:finalCat,id:uid()},!cats.includes(finalCat)?finalCat:null);
+    onSave({...f,category:finalCat,id:f.id||uid()},!cats.includes(finalCat)?finalCat:null);
   };
   return <Overlay onClose={onClose} D={D}>
-    <h2 style={{fontFamily:FS,fontSize:"30px",fontWeight:300,margin:"0 0 4px",color:D.ink,letterSpacing:"-0.8px"}}>Novo Link</h2>
-    <p style={{margin:"0 0 4px",fontSize:"13px",color:D.ink4}}>Adicione ao seu diretório</p>
+    <h2 style={{fontFamily:FS,fontSize:"30px",fontWeight:300,margin:"0 0 4px",color:D.ink,letterSpacing:"-0.8px"}}>{isEdit?"Editar Link":"Novo Link"}</h2>
+    <p style={{margin:"0 0 4px",fontSize:"13px",color:D.ink4}}>{isEdit?"Atualize as informações do link":"Adicione ao seu diretório"}</p>
     <label style={lbl}>Título</label>
     <input style={{...inp,backgroundImage:"none"}} value={f.title} onChange={e=>set("title",e.target.value)} placeholder="Ex: Dashboard GMV Beauty" autoFocus/>
     <label style={lbl}>URL</label>
@@ -486,7 +487,7 @@ function SettingsModal({onClose,D,user,setUser,avatar,setAvatar,onExport,onImpor
   </Overlay>;
 }
 
-function LinkCard({link,onDelete,D,readOnly}){
+function LinkCard({link,onDelete,onEdit,D,readOnly}){
   const{btn}=buildStyles(D);
   const[h,setH]=useState(false);const[cd,setCd]=useState(false);
   return <>
@@ -496,7 +497,10 @@ function LinkCard({link,onDelete,D,readOnly}){
         <a href={link.url} target="_blank" rel="noopener noreferrer" style={{fontWeight:500,fontSize:"13px",color:D.ink,textDecoration:"none",lineHeight:1.45,letterSpacing:"-0.1px"}} onClick={e=>e.stopPropagation()}>
           <span style={{color:D.ink4,marginRight:"6px"}}>↗</span>{link.title}
         </a>
-        {!readOnly&&<button onClick={()=>setCd(true)} style={{...btn.danger,padding:"3px 8px",fontSize:"11px",flexShrink:0,borderRadius:"5px"}}>🗑</button>}
+        {!readOnly&&<div style={{display:"flex",gap:"5px",flexShrink:0}}>
+          <button onClick={()=>onEdit(link)} style={{...btn.ghost,padding:"3px 8px",fontSize:"11px",borderRadius:"5px"}}>✏️ Editar</button>
+          <button onClick={()=>setCd(true)} style={{...btn.danger,padding:"3px 8px",fontSize:"11px",borderRadius:"5px"}}>🗑</button>
+        </div>}
       </div>
       {link.description&&<p style={{fontSize:"12px",color:D.ink3,margin:0,lineHeight:1.6}}>{link.description}</p>}
       {link.category&&<Pill bg={D.yp} color="#7A5800">{link.category}</Pill>}
@@ -694,6 +698,7 @@ function App(){
   const[prefillTask,setPrefillTask]=useState(null);
   const[showTask,setShowTask]=useState(false);
   const[showLink,setShowLink]=useState(false);
+  const[editLink,setEditLink]=useState(null);
   const[showProject,setShowProject]=useState(false);
   const[showCmdK,setShowCmdK]=useState(false);
   const[showSettings,setShowSettings]=useState(false);
@@ -792,7 +797,7 @@ function App(){
   const handleDelTask=id=>{saveTasks(tasks.filter(t=>t.id!==id));setShowTask(false);setEditTask(null);setConfirmDel(null);};
   const handleSaveProject=p=>{saveProjects(projects.some(x=>x.id===p.id)?projects.map(x=>x.id===p.id?p:x):[...projects,p]);setShowProject(false);};
   const handleDelProject=id=>{saveProjects(projects.filter(p=>p.id!==id));saveTasks(tasks.filter(t=>t.projectId!==id));};
-  const handleSaveLink=(f,nc)=>{const c=nc&&!cats.includes(nc)?[...cats,nc]:cats;saveLinks([...links,f]);saveCats(c);setShowLink(false);};
+  const handleSaveLink=(f,nc)=>{const c=nc&&!cats.includes(nc)?[...cats,nc]:cats;saveLinks(links.some(l=>l.id===f.id)?links.map(l=>l.id===f.id?f:l):[...links,f]);saveCats(c);setShowLink(false);setEditLink(null);};
   const handleDelLink=id=>saveLinks(links.filter(l=>l.id!==id));
 
   const openNew=(pre=null)=>{if(readOnly)return;setEditTask(null);setPrefillTask(pre);setShowTask(true);};
@@ -1063,7 +1068,7 @@ function App(){
                 <span style={{fontSize:"11px",color:D.ink4,fontWeight:500}}>{cl.length}</span>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:"10px"}}>
-                {cl.map(l=><LinkCard key={l.id} link={l} onDelete={handleDelLink} D={D} readOnly={readOnly}/>)}
+                {cl.map(l=><LinkCard key={l.id} link={l} onDelete={handleDelLink} onEdit={l=>{setEditLink(l);setShowLink(true);}} D={D} readOnly={readOnly}/>)}
               </div>
             </div>;
           })}</div>;
@@ -1073,7 +1078,7 @@ function App(){
 
     {showTask&&<TaskModal D={D} task={editTask} prefill={prefillTask} projects={projects} onSave={handleSaveTask} onDelete={handleDelTask} onClose={()=>{setShowTask(false);setEditTask(null);setPrefillTask(null);}}/>}
     {showProject&&<ProjectModal D={D} onSave={handleSaveProject} onClose={()=>setShowProject(false)}/>}
-    {showLink&&<LinkModal D={D} cats={cats} onSave={handleSaveLink} onClose={()=>setShowLink(false)}/>}
+    {showLink&&<LinkModal D={D} cats={cats} link={editLink} onSave={handleSaveLink} onClose={()=>{setShowLink(false);setEditLink(null);}}/>}
     {showCmdK&&<CommandPalette D={D} tasks={tasks} projects={projects} onClose={()=>setShowCmdK(false)} onSelectTask={openEdit} onSelectProject={p=>openProject(p.id)} onTab={setTab}/>}
     {showSettings&&<SettingsModal D={D} user={user} setUser={saveUser} avatar={avatar} setAvatar={saveAvatar} onExport={handleExport} onImport={handleImport} onShare={handleShare} toast={showToast} onClose={()=>setShowSettings(false)}/>}
     {toast&&<Toast message={toast} onClose={()=>setToast("")} D={D}/>}
