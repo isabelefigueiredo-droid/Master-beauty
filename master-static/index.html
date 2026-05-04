@@ -426,7 +426,7 @@ function LinkModal({onSave,onClose,cats,D}){
     <label style={lbl}>Descrição</label>
     <input style={{...inp,backgroundImage:"none"}} value={f.description} onChange={e=>set("description",e.target.value)} placeholder="Opcional"/>
     <div style={{display:"flex",gap:"8px",marginTop:"24px"}}>
-      <button onClick={()=>f.title.trim()&&f.url.trim()&&onSave({...f,id:uid()},!cats.includes(f.category)?f.category:null)} style={{...btn.primary,flex:1,padding:"11px"}} onMouseEnter={e=>e.currentTarget.style.background=D.yh} onMouseLeave={e=>e.currentTarget.style.background=D.y}>Salvar</button>
+      <button onClick={()=>{if(!f.title.trim()||!f.url.trim())return;const finalCat=(addC&&nc.trim())?nc.trim():f.category;onSave({...f,category:finalCat,id:uid()},!cats.includes(finalCat)?finalCat:null);}} style={{...btn.primary,flex:1,padding:"11px"}} onMouseEnter={e=>e.currentTarget.style.background=D.yh} onMouseLeave={e=>e.currentTarget.style.background=D.y}>Salvar</button>
       <button onClick={onClose} style={{...btn.ghost,flex:1,padding:"11px"}}>Cancelar</button>
     </div>
   </Overlay>;
