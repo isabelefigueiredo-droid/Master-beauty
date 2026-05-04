@@ -498,7 +498,7 @@ function LinkCard({link,onDelete,onEdit,D,readOnly}){
           <span style={{color:D.ink4,marginRight:"6px"}}>↗</span>{link.title}
         </a>
         {!readOnly&&<div style={{display:"flex",gap:"5px",flexShrink:0}}>
-          <button onClick={()=>onEdit(link)} style={{...btn.ghost,padding:"3px 8px",fontSize:"11px",borderRadius:"5px"}}>✏️ Editar</button>
+          <button onClick={()=>onEdit(link)} title="Editar" style={{background:"transparent",border:"none",cursor:"pointer",padding:"3px 6px",fontSize:"13px",color:D.ink4,borderRadius:"4px",lineHeight:1}}>✏️</button>
           <button onClick={()=>setCd(true)} style={{...btn.danger,padding:"3px 8px",fontSize:"11px",borderRadius:"5px"}}>🗑</button>
         </div>}
       </div>
