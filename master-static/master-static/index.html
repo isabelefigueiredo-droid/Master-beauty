@@ -404,9 +404,13 @@ function TaskModal({task,prefill,onSave,onClose,onDelete,projects,D}){
 function LinkModal({onSave,onClose,cats,D}){
   const{btn,inp,lbl}=buildStyles(D);
   const[f,setF]=useState({title:"",url:"",category:cats[0]||"Arquivos",description:""});
-  const[nc,setNc]=useState("");const[addC,setAddC]=useState(false);
+  const[nc,setNc]=useState("");
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
-  const ok=()=>{if(nc.trim()){set("category",nc.trim());setNc("");setAddC(false);}};
+  const save=()=>{
+    if(!f.title.trim()||!f.url.trim())return;
+    const finalCat=nc.trim()||f.category;
+    onSave({...f,category:finalCat,id:uid()},!cats.includes(finalCat)?finalCat:null);
+  };
   return <Overlay onClose={onClose} D={D}>
     <h2 style={{fontFamily:FS,fontSize:"30px",fontWeight:300,margin:"0 0 4px",color:D.ink,letterSpacing:"-0.8px"}}>Novo Link</h2>
     <p style={{margin:"0 0 4px",fontSize:"13px",color:D.ink4}}>Adicione ao seu diretório</p>
@@ -414,19 +418,14 @@ function LinkModal({onSave,onClose,cats,D}){
     <input style={{...inp,backgroundImage:"none"}} value={f.title} onChange={e=>set("title",e.target.value)} placeholder="Ex: Dashboard GMV Beauty" autoFocus/>
     <label style={lbl}>URL</label>
     <input style={{...inp,backgroundImage:"none"}} value={f.url} onChange={e=>set("url",e.target.value)} placeholder="https://..."/>
-    <label style={lbl}>Categoria</label>
-    <div style={{display:"flex",gap:"8px"}}>
-      <select style={{...inp,flex:1}} value={f.category} onChange={e=>set("category",e.target.value)}>{cats.map(c=><option key={c} value={c}>{c}</option>)}</select>
-      <button onClick={()=>setAddC(a=>!a)} style={{...btn.ghost,padding:"9px 13px",flexShrink:0}}>+</button>
-    </div>
-    {addC&&<div style={{display:"flex",gap:"8px",marginTop:"8px"}}>
-      <input style={{...inp,flex:1,backgroundImage:"none"}} value={nc} onChange={e=>setNc(e.target.value)} placeholder="Nova categoria..." onKeyDown={e=>e.key==="Enter"&&ok()}/>
-      <button onClick={ok} style={{...btn.primary,padding:"9px 14px"}} onMouseEnter={e=>e.currentTarget.style.background=D.yh} onMouseLeave={e=>e.currentTarget.style.background=D.y}>OK</button>
-    </div>}
+    <label style={lbl}>Categoria existente</label>
+    <select style={{...inp}} value={f.category} onChange={e=>set("category",e.target.value)}>{cats.map(c=><option key={c} value={c}>{c}</option>)}</select>
+    <label style={lbl}>Nova categoria (deixe em branco para usar a existente)</label>
+    <input style={{...inp,backgroundImage:"none"}} value={nc} onChange={e=>setNc(e.target.value)} placeholder="Ex: Planilhas, Treinamentos..."/>
     <label style={lbl}>Descrição</label>
     <input style={{...inp,backgroundImage:"none"}} value={f.description} onChange={e=>set("description",e.target.value)} placeholder="Opcional"/>
     <div style={{display:"flex",gap:"8px",marginTop:"24px"}}>
-      <button onClick={()=>{if(!f.title.trim()||!f.url.trim())return;const finalCat=(addC&&nc.trim())?nc.trim():f.category;onSave({...f,category:finalCat,id:uid()},!cats.includes(finalCat)?finalCat:null);}} style={{...btn.primary,flex:1,padding:"11px"}} onMouseEnter={e=>e.currentTarget.style.background=D.yh} onMouseLeave={e=>e.currentTarget.style.background=D.y}>Salvar</button>
+      <button onClick={save} style={{...btn.primary,flex:1,padding:"11px"}} onMouseEnter={e=>e.currentTarget.style.background=D.yh} onMouseLeave={e=>e.currentTarget.style.background=D.y}>Salvar</button>
       <button onClick={onClose} style={{...btn.ghost,flex:1,padding:"11px"}}>Cancelar</button>
     </div>
   </Overlay>;
