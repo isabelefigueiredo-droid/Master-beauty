@@ -16,9 +16,9 @@ const fmt  = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR") : 
 const SEED_TASKS = [
   { id:"t1", title:"Apresentação Q2 Beauty",          type:"projeto", entity:"Beauty Vertical Q2",  deadline:daysFrom(0),  status:"doing", priority:"alta",  notes:"Incluir dados de sell-out e GMV por categoria" },
   { id:"t2", title:"Análise de concorrência skincare", type:"projeto", entity:"Beauty Vertical Q2",  deadline:daysFrom(5),  status:"todo",  priority:"media", notes:"" },
-  { id:"t3", title:"Brief campanha Dia das Mães",      type:"cliente", entity:"L'Oréal Brasil",      deadline:daysFrom(-1), status:"todo",  priority:"alta",  notes:"Confirmar verbas com time comercial" },
-  { id:"t4", title:"Revisão de contrato anual",        type:"cliente", entity:"L'Oréal Brasil",      deadline:daysFrom(10), status:"done",  priority:"baixa", notes:"" },
-  { id:"t5", title:"Deck de sell-in fragrance",        type:"cliente", entity:"O Boticário",         deadline:daysFrom(3),  status:"doing", priority:"alta",  notes:"" },
+  { id:"t3", title:"Brief campanha Dia das Mães",      type:"marca", entity:"L'Oréal Brasil",      deadline:daysFrom(-1), status:"todo",  priority:"alta",  notes:"Confirmar verbas com time comercial" },
+  { id:"t4", title:"Revisão de contrato anual",        type:"marca", entity:"L'Oréal Brasil",      deadline:daysFrom(10), status:"done",  priority:"baixa", notes:"" },
+  { id:"t5", title:"Deck de sell-in fragrance",        type:"marca", entity:"O Boticário",         deadline:daysFrom(3),  status:"doing", priority:"alta",  notes:"" },
   { id:"t6", title:"Mapeamento de sellers beauty",     type:"projeto", entity:"Expansão Sellers 26", deadline:daysFrom(7),  status:"todo",  priority:"media", notes:"" },
 ];
 const SEED_LINKS = [
@@ -131,7 +131,7 @@ function TaskCard({ task, onEdit }) {
       {ttd && <div style={{ fontSize:"10px", fontWeight:700, color:"#7A5800", marginBottom:"7px", background:Y, borderRadius:"4px", padding:"2px 8px", display:"inline-block", fontFamily:F_BODY }}>⏰ Vence hoje</div>}
       <div style={{ fontWeight:500, fontSize:"13.5px", color:INK, marginBottom:"10px", lineHeight:1.4, fontFamily:F_BODY }}>{task.title}</div>
       <div style={{ display:"flex", gap:"5px", flexWrap:"wrap", alignItems:"center" }}>
-        <Tag bg={task.type==="projeto" ? Yp : P4} color={task.type==="projeto" ? "#7A5800" : P1}>{task.type==="projeto" ? "Projeto" : "Cliente"}</Tag>
+        <Tag bg={task.type==="projeto" ? Yp : P4} color={task.type==="projeto" ? "#7A5800" : P1}>{task.type==="projeto" ? "Projeto" : "Marca"}</Tag>
         {task.entity && <Tag bg={P5} color={MUTED}>{task.entity}</Tag>}
         <Tag bg={p.bg} color={p.c}>{p.label}</Tag>
         {task.deadline && <span style={{ fontSize:"11px", color:ov?P1:FAINT, marginLeft:"auto", fontFamily:F_BODY }}>📅 {fmt(task.deadline)}</span>}
@@ -243,10 +243,10 @@ function TaskModal({ task, prefill, onSave, onClose, onDelete, entities }) {
           <div><label style={LBL}>Tipo</label>
             <select style={INP} value={f.type} onChange={e=>set("type",e.target.value)}>
               <option value="projeto">Projeto</option>
-              <option value="cliente">Cliente</option>
+              <option value="marca">Marca</option>
             </select>
           </div>
-          <div><label style={LBL}>{f.type==="projeto"?"Nome do Projeto":"Nome do Cliente"}</label>
+          <div><label style={LBL}>{f.type==="projeto"?"Nome do Projeto":"Nome da Marca"}</label>
             <input style={INP} value={f.entity} onChange={e=>set("entity",e.target.value)} placeholder={f.type==="projeto"?"Ex: Beauty Vertical Q2":"Ex: L'Oréal Brasil"} list="ent-dl" />
             <datalist id="ent-dl">{entList.map(e=><option key={e} value={e}/>)}</datalist>
           </div>
@@ -380,7 +380,7 @@ export default function App() {
 
   const entities = {
     projeto:[...new Set(tasks.filter(t=>t.type==="projeto").map(t=>t.entity).filter(Boolean))],
-    cliente:[...new Set(tasks.filter(t=>t.type==="cliente").map(t=>t.entity).filter(Boolean))],
+    marca:[...new Set(tasks.filter(t=>t.type==="marca").map(t=>t.entity).filter(Boolean))],
   };
   const allEnts = [...new Set(tasks.map(t=>t.entity).filter(Boolean))];
   const ovCount = tasks.filter(t=>t.status!=="done"&&isOv(t.deadline)).length;
@@ -405,9 +405,9 @@ export default function App() {
     { id:"kanban",   icon:"⊞", label:"Kanban",   count:tasks.filter(t=>t.status==="doing").length },
     { id:"list",     icon:"☰", label:"Lista",    count:tasks.length },
     { id:"projetos", icon:"◆", label:"Projetos", count:entities.projeto.length },
-    { id:"clientes", icon:"◇", label:"Clientes", count:entities.cliente.length },
+    { id:"marcas", icon:"◇", label:"Marcas", count:entities.marca.length },
   ];
-  const tabLabel = { kanban:"Kanban", list:"Lista de Tarefas", projetos:"Projetos", clientes:"Clientes", links:"Links Úteis" };
+  const tabLabel = { kanban:"Kanban", list:"Lista de Tarefas", projetos:"Projetos", marcas:"Marcas", links:"Links Úteis" };
 
   return (
     <div style={{ minHeight:"100vh", background:P4, fontFamily:F_BODY, color:INK }}>
@@ -458,8 +458,8 @@ export default function App() {
               <Tag bg={Yp} color="#7A5800">{entities.projeto.length}</Tag>
             </div>
             <div style={{ display:"flex", justifyContent:"space-between" }}>
-              <span style={{ fontSize:"12px", color:MUTED }}>Clientes</span>
-              <Tag bg={P4} color={P1}>{entities.cliente.length}</Tag>
+              <span style={{ fontSize:"12px", color:MUTED }}>Marcas</span>
+              <Tag bg={P4} color={P1}>{entities.marca.length}</Tag>
             </div>
           </div>
         </div>
@@ -475,7 +475,7 @@ export default function App() {
               <select style={{...INP,width:"auto",padding:"6px 10px",fontSize:"12px"}} value={fType} onChange={e=>setFType(e.target.value)}>
                 <option value="">Todos os tipos</option>
                 <option value="projeto">Projetos</option>
-                <option value="cliente">Clientes</option>
+                <option value="marca">Marcas</option>
               </select>
               <select style={{...INP,width:"auto",padding:"6px 10px",fontSize:"12px"}} value={fEnt} onChange={e=>setFEnt(e.target.value)}>
                 <option value="">Todas as entidades</option>
@@ -552,7 +552,7 @@ export default function App() {
                           {ttd && <span style={{ background:Y, fontSize:"10px", borderRadius:"3px", padding:"1px 6px", marginRight:"6px", fontWeight:700, color:INK }}>⏰</span>}
                           {t.title}
                         </td>
-                        <td style={{ padding:"14px 18px" }}><Tag bg={t.type==="projeto"?Yp:P4} color={t.type==="projeto"?"#7A5800":P1}>{t.type==="projeto"?"Projeto":"Cliente"}</Tag></td>
+                        <td style={{ padding:"14px 18px" }}><Tag bg={t.type==="projeto"?Yp:P4} color={t.type==="projeto"?"#7A5800":P1}>{t.type==="projeto"?"Projeto":"Marca"}</Tag></td>
                         <td style={{ padding:"14px 18px", color:MUTED }}>{t.entity||"—"}</td>
                         <td style={{ padding:"14px 18px", color:ov?"#C03030":FAINT, fontWeight:ov?600:400 }}>{fmt(t.deadline)}</td>
                         <td style={{ padding:"14px 18px" }}><Tag bg={m.badge} color={m.btxt}>{STATS[t.status]}</Tag></td>
@@ -566,8 +566,8 @@ export default function App() {
             </div>
           )}
 
-          {(tab==="projetos"||tab==="clientes") && (()=>{
-            const type=tab==="projetos"?"projeto":"cliente";
+          {(tab==="projetos"||tab==="marcas") && (()=>{
+            const type=tab==="projetos"?"projeto":"marca";
             const ents=entities[type];
             return (
               <div>

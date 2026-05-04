@@ -47,8 +47,8 @@ const timeLabel=()=>new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute
 const SEEDS={
   projects:[
     {id:"p1",name:"Beauty Vertical Q2",type:"projeto",description:"Estratégia de crescimento vertical Beauty para o segundo trimestre",createdAt:df(-30)},
-    {id:"p2",name:"L'Oréal Brasil",type:"cliente",description:"Cliente estratégico — campanhas e brand partnerships",createdAt:df(-60)},
-    {id:"p3",name:"O Boticário",type:"cliente",description:"Conta de fragrâncias e parcerias sazonais",createdAt:df(-45)},
+    {id:"p2",name:"L'Oréal Brasil",type:"marca",description:"Marca estratégica — campanhas e brand partnerships",createdAt:df(-60)},
+    {id:"p3",name:"O Boticário",type:"marca",description:"Conta de fragrâncias e parcerias sazonais",createdAt:df(-45)},
     {id:"p4",name:"Expansão Sellers 2026",type:"projeto",description:"Mapeamento e onboarding de novos sellers",createdAt:df(-15)},
   ],
   tasks:[
@@ -200,7 +200,7 @@ function ProjectMiniCard({project,tasks,ratio,hasOv,isProj,onClick,D}){
       </div>
       <div style={{flex:1,minWidth:0}}>
         <div style={{display:"flex",alignItems:"center",gap:"5px",marginBottom:"4px"}}>
-          <span style={{fontSize:"10px",fontWeight:500,color:isProj?"#7A5800":D.r,background:isProj?D.yp:D.rp,borderRadius:"4px",padding:"1px 6px",textTransform:"uppercase",letterSpacing:"0.4px"}}>{isProj?"Projeto":"Cliente"}</span>
+          <span style={{fontSize:"10px",fontWeight:500,color:isProj?"#7A5800":D.r,background:isProj?D.yp:D.rp,borderRadius:"4px",padding:"1px 6px",textTransform:"uppercase",letterSpacing:"0.4px"}}>{isProj?"Projeto":"Marca"}</span>
           {hasOv&&<Dot color={D.overdue} size={5}/>}
         </div>
         <div style={{fontWeight:600,fontSize:"14px",color:D.ink,marginBottom:"3px",letterSpacing:"-0.2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{project.name}</div>
@@ -341,7 +341,7 @@ function ProjectModal({project,onSave,onClose,D}){
     <p style={{margin:"0 0 4px",fontSize:"13px",color:D.ink4}}>Crie um espaço para organizar suas tarefas</p>
     <label style={lbl}>Tipo</label>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}}>
-      {[["projeto","◆","Projeto","Iniciativa interna"],["cliente","◇","Cliente","Conta externa"]].map(([k,ic,t,sub])=>
+      {[["projeto","◆","Projeto","Iniciativa interna"],["marca","◇","Marca","Conta de marca"]].map(([k,ic,t,sub])=>
         <button key={k} onClick={()=>set("type",k)} style={{padding:"14px",borderRadius:"10px",border:`1.5px solid ${f.type===k?D.ink:D.border}`,background:f.type===k?D.cardSubtle:D.card,cursor:"pointer",textAlign:"left",fontFamily:F,transition:"all 0.15s"}}>
           <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"4px"}}>
             <span style={{fontSize:"15px",color:f.type===k?(k==="projeto"?"#7A5800":D.r):D.ink4}}>{ic}</span>
@@ -380,11 +380,11 @@ function TaskModal({task,prefill,onSave,onClose,onDelete,projects,D}){
       </div>
       <label style={lbl}>Título</label>
       <input style={{...inp,backgroundImage:"none"}} value={f.title} onChange={e=>set("title",e.target.value)} placeholder="Ex: Deck de sell-in fragrance" autoFocus/>
-      <label style={lbl}>Projeto / Cliente</label>
+      <label style={lbl}>Projeto / Marca</label>
       <select style={inp} value={f.projectId||""} onChange={e=>set("projectId",e.target.value)}>
         <option value="">— Sem projeto —</option>
         <optgroup label="Projetos">{projects.filter(p=>p.type==="projeto").map(p=><option key={p.id} value={p.id}>◆ {p.name}</option>)}</optgroup>
-        <optgroup label="Clientes">{projects.filter(p=>p.type==="cliente").map(p=><option key={p.id} value={p.id}>◇ {p.name}</option>)}</optgroup>
+        <optgroup label="Marcas">{projects.filter(p=>p.type==="marca").map(p=><option key={p.id} value={p.id}>◇ {p.name}</option>)}</optgroup>
       </select>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"12px"}}>
         <div><label style={lbl}>Status</label><select style={inp} value={f.status} onChange={e=>set("status",e.target.value)}>{Object.entries(STATS).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></div>
@@ -520,7 +520,7 @@ function ProjectDetail({project,tasks,onBack,onEditTask,onNewTask,onDeleteProjec
     <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:"24px",alignItems:"start",marginBottom:"32px"}}>
       <div>
         <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px"}}>
-          <span style={{fontSize:"10px",fontWeight:600,color:isProj?"#7A5800":D.r,background:isProj?D.yp:D.rp,borderRadius:"5px",padding:"4px 10px",textTransform:"uppercase",letterSpacing:"0.7px"}}>{isProj?"◆ Projeto":"◇ Cliente"}</span>
+          <span style={{fontSize:"10px",fontWeight:600,color:isProj?"#7A5800":D.r,background:isProj?D.yp:D.rp,borderRadius:"5px",padding:"4px 10px",textTransform:"uppercase",letterSpacing:"0.7px"}}>{isProj?"◆ Projeto":"◇ Marca"}</span>
           {ovTasks.length>0&&<Pill bg={D.overdueBg} color={D.overdue}>{ovTasks.length} {ovTasks.length===1?"atrasada":"atrasadas"}</Pill>}
         </div>
         <h1 style={{fontFamily:FS,fontSize:"54px",fontWeight:300,color:D.ink,letterSpacing:"-2px",lineHeight:1,marginBottom:"14px"}}>{project.name}</h1>
@@ -642,7 +642,7 @@ function CommandPalette({tasks,projects,onClose,onSelectTask,onSelectProject,onT
   const ql=q.toLowerCase();
   const tResults=q?tasks.filter(t=>t.title.toLowerCase().includes(ql)).slice(0,5):[];
   const pResults=q?projects.filter(p=>p.name.toLowerCase().includes(ql)).slice(0,5):[];
-  const navItems=[{label:"Dashboard",id:"home",icon:"◉"},{label:"Kanban",id:"kanban",icon:"⊞"},{label:"Lista",id:"list",icon:"≡"},{label:"Projetos & Clientes",id:"projetos",icon:"◆"},{label:"Calendário",id:"calendario",icon:"◻"},{label:"Links",id:"links",icon:"↗"}];
+  const navItems=[{label:"Dashboard",id:"home",icon:"◉"},{label:"Kanban",id:"kanban",icon:"⊞"},{label:"Lista",id:"list",icon:"≡"},{label:"Projetos & Marcas",id:"projetos",icon:"◆"},{label:"Calendário",id:"calendario",icon:"◻"},{label:"Links",id:"links",icon:"↗"}];
   const nResults=q?navItems.filter(n=>n.label.toLowerCase().includes(ql)):[];
   return <div style={{position:"fixed",inset:0,background:D.overlay,zIndex:500,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"100px 20px 20px",backdropFilter:"blur(4px)"}} onClick={onClose}>
     <div className="slide" style={{background:D.card,borderRadius:"14px",width:"560px",maxWidth:"100%",border:`1px solid ${D.border}`,boxShadow:D.shadowL,overflow:"hidden"}} onClick={e=>e.stopPropagation()}>
@@ -824,10 +824,10 @@ function App(){
     {id:"home",icon:"◉",label:"Dashboard"},
     {id:"kanban",icon:"⊞",label:"Kanban",count:tasks.filter(t=>t.status==="doing").length},
     {id:"list",icon:"≡",label:"Lista",count:tasks.length},
-    {id:"projetos",icon:"◆",label:"Projetos & Clientes",count:projects.length},
+    {id:"projetos",icon:"◆",label:"Projetos & Marcas",count:projects.length},
     {id:"calendario",icon:"◻",label:"Calendário"},
   ];
-  const tabLabel={home:"Dashboard",kanban:"Kanban",list:"Lista de Tarefas",projetos:"Projetos & Clientes",calendario:"Calendário",links:"Links Úteis","projeto-detail":""};
+  const tabLabel={home:"Dashboard",kanban:"Kanban",list:"Lista de Tarefas",projetos:"Projetos & Marcas",calendario:"Calendário",links:"Links Úteis","projeto-detail":""};
   const currentProject=projects.find(p=>p.id===openProjectId);
 
   return <div style={{minHeight:"100vh",background:D.bg,fontFamily:F,color:D.ink,transition:"background 0.3s"}}>
@@ -885,8 +885,8 @@ function App(){
             <span style={{fontSize:"11px",fontWeight:600,background:D.yp,color:"#7A5800",borderRadius:"4px",padding:"1px 7px"}}>{projects.filter(p=>p.type==="projeto").length}</span>
           </div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
-            <span style={{fontSize:"11px",color:D.ink3}}>◇ Clientes</span>
-            <span style={{fontSize:"11px",fontWeight:600,background:D.rp,color:D.r,borderRadius:"4px",padding:"1px 7px"}}>{projects.filter(p=>p.type==="cliente").length}</span>
+            <span style={{fontSize:"11px",color:D.ink3}}>◇ Marcas</span>
+            <span style={{fontSize:"11px",fontWeight:600,background:D.rp,color:D.r,borderRadius:"4px",padding:"1px 7px"}}>{projects.filter(p=>p.type==="marca").length}</span>
           </div>
         </div>
       </div>}
@@ -1029,13 +1029,13 @@ function App(){
                   })}
                 </div>
               </div>}
-              {projects.filter(p=>p.type==="cliente").length>0&&<div>
+              {projects.filter(p=>p.type==="marca").length>0&&<div>
                 <div style={{display:"flex",alignItems:"baseline",gap:"10px",marginBottom:"14px"}}>
-                  <h3 style={{fontFamily:FS,fontSize:"26px",fontWeight:300,color:D.ink,letterSpacing:"-0.7px"}}>Clientes</h3>
+                  <h3 style={{fontFamily:FS,fontSize:"26px",fontWeight:300,color:D.ink,letterSpacing:"-0.7px"}}>Marcas</h3>
                   <span style={{fontSize:"12px",color:D.ink4}}>contas externas</span>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:"10px"}}>
-                  {projects.filter(p=>p.type==="cliente").map(p=>{
+                  {projects.filter(p=>p.type==="marca").map(p=>{
                     const pT=tasks.filter(t=>t.projectId===p.id);const total=pT.length;
                     const done=pT.filter(t=>t.status==="done").length;
                     const ratio=total?Math.round((done/total)*100):0;
