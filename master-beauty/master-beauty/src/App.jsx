@@ -308,7 +308,7 @@ function LinkModal({ onSave, onClose, cats }) {
       <label style={LBL}>Descrição</label>
       <input style={INP} value={f.description} onChange={e=>set("description",e.target.value)} placeholder="Opcional" />
       <div style={{ display:"flex", gap:"10px", marginTop:"28px" }}>
-        <button onClick={()=>f.title.trim()&&f.url.trim()&&onSave({...f,id:uid()},nc.trim()||null)} style={{...BTNML,flex:1,padding:"12px"}}
+        <button onClick={()=>{ if(!f.title.trim()||!f.url.trim()) return; const finalCat=(addC&&nc.trim())?nc.trim():f.category; onSave({...f,category:finalCat,id:uid()},!cats.includes(finalCat)?finalCat:null); }} style={{...BTNML,flex:1,padding:"12px"}}
           onMouseEnter={e=>(e.currentTarget.style.background=Yd)} onMouseLeave={e=>(e.currentTarget.style.background=Y)}>Salvar</button>
         <button onClick={onClose} style={{...BTNG,flex:1,padding:"12px"}}>Cancelar</button>
       </div>
