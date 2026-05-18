@@ -1,4 +1,5 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
-  "outputDirectory": "master-static"
+  "buildCommand": "cd master-beauty/master-beauty && npm install && npm run build",
+  "outputDirectory": "master-beauty/master-beauty/dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
