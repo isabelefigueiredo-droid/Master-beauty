@@ -8,9 +8,9 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "FitLife — Treino & Dieta",
-        short_name: "FitLife",
-        description: "Seu app de treino e dieta personalizado",
+        name: "Vida Saudável — Isa",
+        short_name: "Vida Saudável",
+        description: "Plano de treino e alimentação da Isa",
         theme_color: "#e879a0",
         background_color: "#0a0a0a",
         display: "standalone",

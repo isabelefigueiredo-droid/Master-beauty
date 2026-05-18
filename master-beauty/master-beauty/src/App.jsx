@@ -1,75 +1,89 @@
 import { useState, useRef, useEffect } from "react";
 
-/* ─── Storage ─────────────────────────────────────────── */
 const db = {
   get: (k, d = null) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
 const todayStr = () => new Date().toISOString().split("T")[0];
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
-const yt = (q) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q + " como fazer academia")}`;
+const ytEmbed = (q) => `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(q + " como fazer academia")}`;
 
-/* ─── Treinos ABCDE ────────────────────────────────────── */
+/* ─── Semana iniciando na segunda-feira ─── */
+function getWeekDays(historico) {
+  const today = new Date();
+  const dow = today.getDay();
+  const daysFromMon = dow === 0 ? 6 : dow - 1;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - daysFromMon);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const ds = d.toISOString().split("T")[0];
+    return { ds, feito: historico.some(h => h.data === ds), dia: ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"][i] };
+  });
+}
+
+/* ─── Treinos ABCDE ─── */
 const TREINOS = {
   A: {
     letra: "A", nome: "Peito + Tríceps", tag: "Seg", cor: "#d63384",
     cardio: "20 min caminhada rápida ou elíptico",
     exercicios: [
-      { id: "a1", nome: "Supino Reto (barra ou halteres)", series: 4, reps: "12", descanso: 60, video: yt("supino reto") },
-      { id: "a2", nome: "Crucifixo com Halteres", series: 3, reps: "15", descanso: 45, video: yt("crucifixo halteres") },
-      { id: "a3", nome: "Supino Inclinado", series: 3, reps: "12", descanso: 60, video: yt("supino inclinado") },
-      { id: "a4", nome: "Tríceps Corda (polia)", series: 4, reps: "12", descanso: 45, video: yt("triceps corda polia") },
-      { id: "a5", nome: "Tríceps Francês", series: 3, reps: "15", descanso: 45, video: yt("triceps frances") },
-      { id: "a6", nome: "Tríceps Testa (barra W)", series: 3, reps: "12", descanso: 45, video: yt("triceps testa barra W") },
+      { id: "a1", nome: "Supino Reto (barra ou halteres)", series: 4, reps: "12", descanso: 60, video: ytEmbed("supino reto") },
+      { id: "a2", nome: "Crucifixo com Halteres", series: 3, reps: "15", descanso: 45, video: ytEmbed("crucifixo halteres peito") },
+      { id: "a3", nome: "Supino Inclinado", series: 3, reps: "12", descanso: 60, video: ytEmbed("supino inclinado") },
+      { id: "a4", nome: "Tríceps Corda (polia)", series: 4, reps: "12", descanso: 45, video: ytEmbed("triceps corda polia") },
+      { id: "a5", nome: "Tríceps Francês", series: 3, reps: "15", descanso: 45, video: ytEmbed("triceps frances") },
+      { id: "a6", nome: "Tríceps Testa (barra W)", series: 3, reps: "12", descanso: 45, video: ytEmbed("triceps testa barra W") },
     ],
   },
   B: {
     letra: "B", nome: "Costas + Bíceps", tag: "Ter", cor: "#7c3aed",
     cardio: "20 min bike ou escada",
     exercicios: [
-      { id: "b1", nome: "Puxada Frontal (polia alta)", series: 4, reps: "12", descanso: 60, video: yt("puxada frontal polia alta") },
-      { id: "b2", nome: "Remada Curvada com Barra", series: 4, reps: "12", descanso: 60, video: yt("remada curvada barra") },
-      { id: "b3", nome: "Remada Unilateral Halter", series: 3, reps: "12", descanso: 45, video: yt("remada unilateral haltere") },
-      { id: "b4", nome: "Pulldown na Polia (triângulo)", series: 3, reps: "15", descanso: 45, video: yt("pulldown polia triangulo") },
-      { id: "b5", nome: "Rosca Direta com Barra", series: 4, reps: "12", descanso: 45, video: yt("rosca direta barra biceps") },
-      { id: "b6", nome: "Rosca Martelo com Halteres", series: 3, reps: "15", descanso: 45, video: yt("rosca martelo halteres") },
+      { id: "b1", nome: "Puxada Frontal (polia alta)", series: 4, reps: "12", descanso: 60, video: ytEmbed("puxada frontal polia alta") },
+      { id: "b2", nome: "Remada Curvada com Barra", series: 4, reps: "12", descanso: 60, video: ytEmbed("remada curvada barra") },
+      { id: "b3", nome: "Remada Unilateral Halter", series: 3, reps: "12", descanso: 45, video: ytEmbed("remada unilateral haltere") },
+      { id: "b4", nome: "Pulldown na Polia (triângulo)", series: 3, reps: "15", descanso: 45, video: ytEmbed("pulldown polia triangulo costas") },
+      { id: "b5", nome: "Rosca Direta com Barra", series: 4, reps: "12", descanso: 45, video: ytEmbed("rosca direta barra biceps") },
+      { id: "b6", nome: "Rosca Martelo com Halteres", series: 3, reps: "15", descanso: 45, video: ytEmbed("rosca martelo halteres") },
     ],
   },
   C: {
     letra: "C", nome: "Pernas", tag: "Qua", cor: "#059669",
     cardio: "10 min aquecimento + 5 min alongamento",
     exercicios: [
-      { id: "c1", nome: "Agachamento Livre", series: 4, reps: "12", descanso: 90, video: yt("agachamento livre") },
-      { id: "c2", nome: "Leg Press 45°", series: 4, reps: "15", descanso: 90, video: yt("leg press 45 graus") },
-      { id: "c3", nome: "Avanço com Halteres", series: 3, reps: "12/lado", descanso: 60, video: yt("avanco halteres passada") },
-      { id: "c4", nome: "Cadeira Extensora", series: 3, reps: "15", descanso: 45, video: yt("cadeira extensora quadriceps") },
-      { id: "c5", nome: "Cadeira Flexora", series: 3, reps: "15", descanso: 45, video: yt("cadeira flexora posterior") },
-      { id: "c6", nome: "Panturrilha na Máquina", series: 4, reps: "20", descanso: 30, video: yt("panturrilha maquina academia") },
+      { id: "c1", nome: "Agachamento Livre", series: 4, reps: "12", descanso: 90, video: ytEmbed("agachamento livre") },
+      { id: "c2", nome: "Leg Press 45°", series: 4, reps: "15", descanso: 90, video: ytEmbed("leg press 45 graus") },
+      { id: "c3", nome: "Avanço com Halteres", series: 3, reps: "12/lado", descanso: 60, video: ytEmbed("avanco halteres passada") },
+      { id: "c4", nome: "Cadeira Extensora", series: 3, reps: "15", descanso: 45, video: ytEmbed("cadeira extensora quadriceps") },
+      { id: "c5", nome: "Cadeira Flexora", series: 3, reps: "15", descanso: 45, video: ytEmbed("cadeira flexora posterior") },
+      { id: "c6", nome: "Panturrilha na Máquina", series: 4, reps: "20", descanso: 30, video: ytEmbed("panturrilha maquina academia") },
     ],
   },
   D: {
     letra: "D", nome: "Glúteos + Abdômen", tag: "Qui", cor: "#c2410c",
     cardio: "15 min cardio leve ao final",
     exercicios: [
-      { id: "d1", nome: "Hip Thrust com Barra", series: 4, reps: "15", descanso: 60, video: yt("hip thrust barra gluteos") },
-      { id: "d2", nome: "Stiff com Halteres", series: 4, reps: "12", descanso: 60, video: yt("stiff halteres posterior") },
-      { id: "d3", nome: "Abdução de Quadril (máquina)", series: 3, reps: "20", descanso: 30, video: yt("abducao quadril maquina") },
-      { id: "d4", nome: "Agachamento Sumô", series: 3, reps: "15", descanso: 45, video: yt("agachamento sumo gluteos") },
-      { id: "d5", nome: "Abdominal Crunch", series: 3, reps: "20", descanso: 30, video: yt("abdominal crunch") },
-      { id: "d6", nome: "Prancha (isometria)", series: 3, reps: "30s", descanso: 30, video: yt("prancha abdominal isometria") },
-      { id: "d7", nome: "Abdominal Bicicleta", series: 3, reps: "20", descanso: 30, video: yt("abdominal bicicleta") },
+      { id: "d1", nome: "Hip Thrust com Barra", series: 4, reps: "15", descanso: 60, video: ytEmbed("hip thrust barra gluteos") },
+      { id: "d2", nome: "Stiff com Halteres", series: 4, reps: "12", descanso: 60, video: ytEmbed("stiff halteres posterior") },
+      { id: "d3", nome: "Abdução de Quadril (máquina)", series: 3, reps: "20", descanso: 30, video: ytEmbed("abducao quadril maquina") },
+      { id: "d4", nome: "Agachamento Sumô", series: 3, reps: "15", descanso: 45, video: ytEmbed("agachamento sumo gluteos") },
+      { id: "d5", nome: "Abdominal Crunch", series: 3, reps: "20", descanso: 30, video: ytEmbed("abdominal crunch") },
+      { id: "d6", nome: "Prancha (isometria)", series: 3, reps: "30s", descanso: 30, video: ytEmbed("prancha abdominal isometria") },
+      { id: "d7", nome: "Abdominal Bicicleta", series: 3, reps: "20", descanso: 30, video: ytEmbed("abdominal bicicleta") },
     ],
   },
   E: {
     letra: "E", nome: "Ombros + HIIT", tag: "Sex", cor: "#0369a1",
     cardio: "15 min HIIT: 30s forte / 30s leve",
     exercicios: [
-      { id: "e1", nome: "Desenvolvimento com Halteres", series: 4, reps: "12", descanso: 60, video: yt("desenvolvimento halteres ombros") },
-      { id: "e2", nome: "Elevação Lateral", series: 4, reps: "15", descanso: 45, video: yt("elevacao lateral ombros") },
-      { id: "e3", nome: "Elevação Frontal", series: 3, reps: "15", descanso: 45, video: yt("elevacao frontal ombros") },
-      { id: "e4", nome: "Encolhimento de Ombros", series: 3, reps: "15", descanso: 30, video: yt("encolhimento ombros trapezio") },
-      { id: "e5", nome: "Crucifixo Invertido (posterior)", series: 3, reps: "15", descanso: 45, video: yt("crucifixo invertido posterior deltoides") },
-      { id: "e6", nome: "Prancha Lateral", series: 3, reps: "20s/lado", descanso: 30, video: yt("prancha lateral abdominal") },
+      { id: "e1", nome: "Desenvolvimento com Halteres", series: 4, reps: "12", descanso: 60, video: ytEmbed("desenvolvimento halteres ombros") },
+      { id: "e2", nome: "Elevação Lateral", series: 4, reps: "15", descanso: 45, video: ytEmbed("elevacao lateral ombros") },
+      { id: "e3", nome: "Elevação Frontal", series: 3, reps: "15", descanso: 45, video: ytEmbed("elevacao frontal ombros") },
+      { id: "e4", nome: "Encolhimento de Ombros", series: 3, reps: "15", descanso: 30, video: ytEmbed("encolhimento ombros trapezio") },
+      { id: "e5", nome: "Crucifixo Invertido (posterior)", series: 3, reps: "15", descanso: 45, video: ytEmbed("crucifixo invertido posterior deltoides") },
+      { id: "e6", nome: "Prancha Lateral", series: 3, reps: "20s/lado", descanso: 30, video: ytEmbed("prancha lateral abdominal") },
     ],
   },
 };
@@ -77,43 +91,43 @@ const TREINOS = {
 const DIA_TREINO = { 1: "A", 2: "B", 3: "C", 4: "D", 5: "E" };
 const getTreinoHoje = () => DIA_TREINO[new Date().getDay()] || null;
 
-/* ─── Dieta ─────────────────────────────────────────────── */
+/* ─── Dieta (~1370 kcal) ─── */
 const DIETA = [
   {
     id: "ref1", nome: "☀️ Café da Manhã", hora: "07:00",
-    kcal: 350, prot: 22, carb: 35, gord: 10,
-    alimentos: ["2 ovos mexidos ou omelete com vegetais (tomate, espinafre)", "1 fatia de pão integral com pasta de amendoim (1 col de chá)", "1 copo de café preto ou chá verde sem açúcar"],
-    dica: "Os ovos no café garantem saciedade e proteína logo cedo.",
+    kcal: 280, prot: 18, carb: 26, gord: 9,
+    alimentos: ["2 ovos mexidos ou omelete com espinafre", "1 fatia de pão integral com pasta de amendoim (1 col de chá)", "Café preto ou chá verde sem açúcar"],
+    dica: "Os ovos garantem proteína e saciedade logo cedo.",
   },
   {
     id: "ref2", nome: "🍎 Lanche da Manhã", hora: "10:00",
-    kcal: 180, prot: 12, carb: 20, gord: 5,
-    alimentos: ["1 fruta (maçã, pera ou laranja)", "10 castanhas-do-pará ou amêndoas"],
-    dica: "Mantenha o lanche leve para não ultrapassar as calorias.",
+    kcal: 120, prot: 8, carb: 15, gord: 4,
+    alimentos: ["1 fruta pequena (maçã ou pera)", "5 castanhas-do-pará ou amêndoas"],
+    dica: "Lanche leve para não ultrapassar as calorias.",
   },
   {
     id: "ref3", nome: "🍽️ Almoço", hora: "12:30",
-    kcal: 520, prot: 45, carb: 50, gord: 12,
-    alimentos: ["150g de frango grelhado ou peixe (tilápia, atum)", "3 col de sopa de arroz integral", "2 col de sopa de feijão ou lentilha", "Salada à vontade: alface, rúcula, tomate, pepino", "1 fio de azeite na salada"],
+    kcal: 400, prot: 38, carb: 38, gord: 9,
+    alimentos: ["120g de frango grelhado ou peixe", "2 col de sopa de arroz integral", "2 col de sopa de feijão ou lentilha", "Salada à vontade (alface, rúcula, tomate, pepino)", "1 col de chá de azeite na salada"],
     dica: "Proteína + fibras no almoço = menos fome à tarde.",
   },
   {
     id: "ref4", nome: "🥛 Lanche da Tarde", hora: "16:00",
-    kcal: 200, prot: 18, carb: 22, gord: 3,
-    alimentos: ["1 iogurte grego natural (sem açúcar, 170g)", "1 col de sopa de granola sem açúcar ou 1 fruta picada"],
+    kcal: 150, prot: 14, carb: 16, gord: 2,
+    alimentos: ["1 iogurte grego natural (sem açúcar, 120g)", "1/2 fruta picada ou 1 col de granola sem açúcar"],
     dica: "Ideal antes do treino para ter energia.",
   },
   {
     id: "ref5", nome: "🌙 Jantar", hora: "19:30",
-    kcal: 420, prot: 38, carb: 35, gord: 10,
-    alimentos: ["150g de filé de peixe, frango ou 3 ovos", "150g de batata doce cozida ou 1/2 xíc de arroz integral", "Legumes salteados: abobrinha, brócolis, cenoura"],
-    dica: "Carboidrato + proteína à noite ajuda na recuperação muscular.",
+    kcal: 330, prot: 32, carb: 28, gord: 8,
+    alimentos: ["120g de frango, peixe ou 2 ovos", "100g de batata doce cozida ou 1/3 xíc de arroz integral", "Legumes à vontade: abobrinha, brócolis, cenoura"],
+    dica: "Refeição leve mas com proteína suficiente para recuperação.",
   },
   {
     id: "ref6", nome: "🌛 Ceia (opcional)", hora: "21:30",
-    kcal: 120, prot: 15, carb: 8, gord: 3,
-    alimentos: ["100g de cottage ou ricota", "1 col de chá de mel OU canela em pó"],
-    dica: "Proteína de absorção lenta para nutrir os músculos durante o sono.",
+    kcal: 90, prot: 12, carb: 5, gord: 2,
+    alimentos: ["80g de cottage ou ricota", "Canela em pó a gosto"],
+    dica: "Proteína de absorção lenta que nutre os músculos durante o sono.",
   },
 ];
 
@@ -122,7 +136,7 @@ const TOTAL_PROT = DIETA.reduce((s, r) => s + r.prot, 0);
 const TOTAL_CARB = DIETA.reduce((s, r) => s + r.carb, 0);
 const TOTAL_GORD = DIETA.reduce((s, r) => s + r.gord, 0);
 
-/* ─── Timer hook ─────────────────────────────────────────── */
+/* ─── Timer ─── */
 function useTimer() {
   const [secs, setSecs] = useState(0);
   const [running, setRunning] = useState(false);
@@ -142,34 +156,42 @@ function useTimer() {
   return { secs, running, start, stop, fmt };
 }
 
-/* ─── Componentes base ──────────────────────────────────── */
+/* ─── Componentes base ─── */
 function Card({ children, className = "" }) {
+  return <div className={`bg-white border border-[#fde8f0] rounded-2xl p-4 shadow-sm ${className}`}>{children}</div>;
+}
+function Badge({ children, color = "#d63384" }) {
+  return <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: color + "18", color }}>{children}</span>;
+}
+
+/* ─── Modal de vídeo ─── */
+function VideoModal({ url, nome, onClose }) {
   return (
-    <div className={`bg-white border border-[#fde8f0] rounded-2xl p-4 shadow-sm ${className}`}>
-      {children}
+    <div className="fixed inset-0 z-50 flex flex-col bg-black" onClick={onClose}>
+      <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a1a]" onClick={e => e.stopPropagation()}>
+        <p className="text-white text-sm font-semibold flex-1 mr-2 truncate">{nome}</p>
+        <button onClick={onClose} className="text-white text-xl w-8 h-8 flex items-center justify-center">✕</button>
+      </div>
+      <div className="flex-1" onClick={e => e.stopPropagation()}>
+        <iframe
+          src={url}
+          className="w-full h-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          title={nome}
+        />
+      </div>
     </div>
   );
 }
-function Badge({ children, color = "#d63384" }) {
-  return (
-    <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: color + "18", color }}>
-      {children}
-    </span>
-  );
-}
 
-/* ─── Página: Home ──────────────────────────────────────── */
+/* ─── Home ─── */
 function Home({ setPage }) {
   const treinoHoje = getTreinoHoje();
   const treino = treinoHoje ? TREINOS[treinoHoje] : null;
   const historico = db.get("historico", []);
   const dietaDone = db.get(`dieta_${todayStr()}`, []);
-
-  const semanaPassada = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(); d.setDate(d.getDate() - 6 + i);
-    const ds = d.toISOString().split("T")[0];
-    return { ds, feito: historico.some(h => h.data === ds), dia: ["D","S","T","Q","Q","S","S"][d.getDay()] };
-  });
+  const semana = getWeekDays(historico);
   const streak = (() => {
     let s = 0;
     for (let i = 0; i < 30; i++) {
@@ -189,21 +211,21 @@ function Home({ setPage }) {
 
       <Card>
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-semibold text-[#c4a0b5]">Sequência esta semana</span>
+          <span className="text-sm font-semibold text-[#c4a0b5]">Semana atual</span>
           <span className="text-sm font-bold text-[#d63384]">{streak} dia{streak !== 1 ? "s" : ""} 🔥</span>
         </div>
-        <div className="flex gap-2 justify-between">
-          {semanaPassada.map(({ ds, feito, dia }) => (
-            <div key={ds} className="flex flex-col items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 ${feito ? "border-[#d63384] bg-[#d6338418] text-[#d63384]" : ds === todayStr() ? "border-[#d63384] text-[#d63384] border-dashed" : "border-[#fde8f0] text-[#d4b8c8]"}`}>
-                {feito ? "✓" : dia}
+        <div className="flex gap-1.5 justify-between">
+          {semana.map(({ ds, feito, dia }) => (
+            <div key={ds} className="flex flex-col items-center gap-1 flex-1">
+              <div className={`w-full aspect-square rounded-xl flex items-center justify-center text-xs font-bold border-2 max-w-[36px] mx-auto ${feito ? "border-[#d63384] bg-[#d6338418] text-[#d63384]" : ds === todayStr() ? "border-[#d63384] text-[#d63384] border-dashed bg-[#fff0f5]" : "border-[#fde8f0] text-[#d4b8c8] bg-[#fff8fa]"}`}>
+                {feito ? "✓" : dia.slice(0,1)}
               </div>
-              <span className="text-[10px] text-[#d4b8c8]">{dia}</span>
+              <span className="text-[9px] text-[#d4b8c8] font-medium">{dia.slice(0,3)}</span>
             </div>
           ))}
         </div>
         <div className="mt-3 flex gap-4 text-sm">
-          <div><span className="text-[#c4a0b5]">Esta semana: </span><span className="font-bold text-[#2d1b2e]">{semanaPassada.filter(x => x.feito).length} treinos</span></div>
+          <div><span className="text-[#c4a0b5]">Esta semana: </span><span className="font-bold text-[#2d1b2e]">{semana.filter(x => x.feito).length} treinos</span></div>
           <div><span className="text-[#c4a0b5]">Total: </span><span className="font-bold text-[#2d1b2e]">{historico.length}</span></div>
         </div>
       </Card>
@@ -262,7 +284,7 @@ function Home({ setPage }) {
           </div>
         </div>
         <button onClick={() => setPage("dieta")}
-          className="w-full py-2.5 rounded-xl font-bold text-sm border border-[#059669] text-[#059669] hover:bg-[#05996910] transition-all">
+          className="w-full py-2.5 rounded-xl font-bold text-sm border border-[#059669] text-[#059669] transition-all">
           Ver plano alimentar
         </button>
       </Card>
@@ -270,29 +292,27 @@ function Home({ setPage }) {
   );
 }
 
-/* ─── Página: Treino ─────────────────────────────────────── */
+/* ─── Treino ─── */
 function Treino() {
   const treinoHojeLetra = getTreinoHoje();
   const [letraSel, setLetraSel] = useState(treinoHojeLetra || "A");
   const treino = TREINOS[letraSel];
   const [registros, setRegistros] = useState(() => db.get(`treino_reg_${todayStr()}`, {}));
   const [expandido, setExpandido] = useState(null);
+  const [videoAberto, setVideoAberto] = useState(null);
   const [sessaoAtiva, setSessaoAtiva] = useState(() => db.get("sessao_ativa", null));
   const timer = useTimer();
 
   const salvarRegistros = (r) => { db.set(`treino_reg_${todayStr()}`, r); setRegistros(r); };
-
   const adicionarSerie = (exId, peso, reps) => {
     const atual = registros[exId] || [];
-    const novo = { ...registros, [exId]: [...atual, { peso, reps, ts: Date.now() }] };
-    salvarRegistros(novo);
+    salvarRegistros({ ...registros, [exId]: [...atual, { peso, reps, ts: Date.now() }] });
   };
   const removerSerie = (exId, idx) => {
     const atual = [...(registros[exId] || [])];
     atual.splice(idx, 1);
     salvarRegistros({ ...registros, [exId]: atual });
   };
-
   const iniciarSessao = () => {
     const s = { letra: letraSel, inicio: Date.now() };
     db.set("sessao_ativa", s); setSessaoAtiva(s);
@@ -317,12 +337,14 @@ function Treino() {
 
   return (
     <div className="p-4 space-y-4">
+      {videoAberto && <VideoModal url={videoAberto.url} nome={videoAberto.nome} onClose={() => setVideoAberto(null)} />}
+
       <div>
         <h1 className="text-xl font-bold mb-3 text-[#2d1b2e]">Treinos</h1>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
           {Object.values(TREINOS).map(t => (
             <button key={t.letra} onClick={() => { setLetraSel(t.letra); setExpandido(null); }}
-              className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all`}
+              className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all"
               style={letraSel === t.letra
                 ? { borderColor: t.cor, background: t.cor + "18", color: t.cor }
                 : { borderColor: "#fde8f0", background: "white", color: "#c4a0b5" }}>
@@ -365,7 +387,7 @@ function Treino() {
       </Card>
 
       {timer.running && (
-        <div className="fixed top-4 right-4 z-50 bg-white border-2 border-[#d63384] rounded-2xl px-4 py-3 shadow-xl flex items-center gap-3">
+        <div className="fixed top-4 right-4 z-40 bg-white border-2 border-[#d63384] rounded-2xl px-4 py-3 shadow-xl flex items-center gap-3">
           <div>
             <div className="text-xs text-[#c4a0b5]">Descanso</div>
             <div className="text-2xl font-black text-[#d63384]">{timer.fmt(timer.secs)}</div>
@@ -388,7 +410,7 @@ function Treino() {
                   </div>
                   <div>
                     <p className={`text-sm font-semibold leading-tight ${concluido ? "text-[#059669]" : "text-[#2d1b2e]"}`}>{ex.nome}</p>
-                    <p className="text-xs text-[#c4a0b5]">{ex.series} séries × {ex.reps} reps · {ex.descanso}s descanso</p>
+                    <p className="text-xs text-[#c4a0b5]">{ex.series}×{ex.reps} · {ex.descanso}s descanso</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -399,10 +421,19 @@ function Treino() {
 
               {aberto && (
                 <div className="mt-3 border-t border-[#fde8f0] pt-3 space-y-3">
-                  <a href={ex.video} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-xs font-semibold text-[#d63384] bg-[#fff0f5] rounded-xl px-3 py-2">
-                    ▶ Ver vídeo no YouTube
-                  </a>
+                  {/* Vídeo embutido */}
+                  <button
+                    onClick={() => setVideoAberto({ url: ex.video, nome: ex.nome })}
+                    className="w-full flex items-center gap-3 bg-[#fff0f5] border border-[#fde8f0] rounded-xl px-3 py-2.5 text-left">
+                    <div className="w-8 h-8 rounded-lg bg-[#d63384] flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-sm">▶</span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-[#d63384]">Ver vídeo de exemplo</p>
+                      <p className="text-[10px] text-[#c4a0b5]">YouTube · abre no app</p>
+                    </div>
+                  </button>
+
                   {seriesFeitas.length > 0 && (
                     <div className="space-y-1.5">
                       {seriesFeitas.map((s, i) => (
@@ -414,6 +445,7 @@ function Treino() {
                       ))}
                     </div>
                   )}
+
                   {sessaoAtiva?.letra === letraSel && (
                     <SerieForm onAdd={(p, r) => { adicionarSerie(ex.id, p, r); timer.start(ex.descanso); }} corTreino={treino.cor} />
                   )}
@@ -463,23 +495,21 @@ function SerieForm({ onAdd, corTreino }) {
   );
 }
 
-/* ─── Página: Dieta ─────────────────────────────────────── */
+/* ─── Dieta ─── */
 function Dieta() {
   const [done, setDone] = useState(() => db.get(`dieta_${todayStr()}`, []));
   const [aberto, setAberto] = useState(null);
-
   const toggle = (id) => {
     const novo = done.includes(id) ? done.filter(x => x !== id) : [...done, id];
     setDone(novo); db.set(`dieta_${todayStr()}`, novo);
   };
-
   const kcalConsumida = DIETA.filter(r => done.includes(r.id)).reduce((s, r) => s + r.kcal, 0);
   const protConsumida = DIETA.filter(r => done.includes(r.id)).reduce((s, r) => s + r.prot, 0);
 
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-xl font-bold pt-2 text-[#2d1b2e]">Plano Alimentar</h1>
-      <p className="text-sm text-[#c4a0b5] -mt-2">Emagrecimento + definição</p>
+      <p className="text-sm text-[#c4a0b5] -mt-2">Emagrecimento + definição · ~{TOTAL_KCAL} kcal/dia</p>
 
       <Card>
         <div className="flex justify-between items-center mb-3">
@@ -529,9 +559,7 @@ function Dieta() {
                 <div className="flex items-center gap-2">
                   <span className="text-[#d4b8c8] text-xs">{open ? "▲" : "▼"}</span>
                   <button onClick={() => toggle(ref.id)}
-                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${feita ? "bg-[#05996918] border-[#059669] text-[#059669]" : "border-[#fde8f0] text-transparent"}`}>
-                    ✓
-                  </button>
+                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${feita ? "bg-[#05996918] border-[#059669] text-[#059669]" : "border-[#fde8f0] text-transparent"}`}>✓</button>
                 </div>
               </div>
               {open && (
@@ -543,11 +571,7 @@ function Dieta() {
                       </div>
                     ))}
                   </div>
-                  {ref.dica && (
-                    <div className="bg-[#fff8fa] rounded-xl p-3 mt-2">
-                      <p className="text-xs text-[#c4a0b5]">💡 {ref.dica}</p>
-                    </div>
-                  )}
+                  {ref.dica && <div className="bg-[#fff8fa] rounded-xl p-3 mt-2"><p className="text-xs text-[#c4a0b5]">💡 {ref.dica}</p></div>}
                   <div className="grid grid-cols-4 gap-1 pt-1">
                     {[{l:"Kcal",v:ref.kcal,c:"#2d1b2e"},{l:"Prot",v:`${ref.prot}g`,c:"#d63384"},{l:"Carbs",v:`${ref.carb}g`,c:"#c2410c"},{l:"Gord",v:`${ref.gord}g`,c:"#7c3aed"}].map(m => (
                       <div key={m.l} className="text-center">
@@ -574,26 +598,20 @@ function Dieta() {
   );
 }
 
-/* ─── Página: Histórico ──────────────────────────────────── */
+/* ─── Histórico ─── */
 function Historico() {
   const [historico, setHistorico] = useState(() => db.get("historico", []));
   const [aberto, setAberto] = useState(null);
-
-  const remover = (id) => {
-    const novo = historico.filter(h => h.id !== id);
-    setHistorico(novo); db.set("historico", novo);
-  };
+  const remover = (id) => { const novo = historico.filter(h => h.id !== id); setHistorico(novo); db.set("historico", novo); };
   const fmt = (ds) => new Date(ds + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" });
 
-  if (historico.length === 0) {
-    return (
-      <div className="p-4 flex flex-col items-center justify-center min-h-[50vh] text-center">
-        <div className="text-6xl mb-4">📋</div>
-        <h2 className="text-xl font-bold mb-2 text-[#2d1b2e]">Sem treinos ainda</h2>
-        <p className="text-[#c4a0b5] text-sm">Finalize um treino para ver o histórico aqui.</p>
-      </div>
-    );
-  }
+  if (!historico.length) return (
+    <div className="p-4 flex flex-col items-center justify-center min-h-[50vh] text-center">
+      <div className="text-6xl mb-4">📋</div>
+      <h2 className="text-xl font-bold mb-2 text-[#2d1b2e]">Sem treinos ainda</h2>
+      <p className="text-[#c4a0b5] text-sm">Finalize um treino para ver o histórico aqui.</p>
+    </div>
+  );
 
   return (
     <div className="p-4 space-y-4">
@@ -602,11 +620,7 @@ function Historico() {
         <span className="text-sm text-[#c4a0b5]">{historico.length} treino{historico.length !== 1 ? "s" : ""}</span>
       </div>
       <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: "Treinos", val: historico.length, color: "#d63384" },
-          { label: "Séries", val: historico.reduce((s, h) => s + (h.totalSeries || 0), 0), color: "#7c3aed" },
-          { label: "Minutos", val: historico.reduce((s, h) => s + (h.duracao || 0), 0), color: "#059669" },
-        ].map(s => (
+        {[{label:"Treinos",val:historico.length,color:"#d63384"},{label:"Séries",val:historico.reduce((s,h)=>s+(h.totalSeries||0),0),color:"#7c3aed"},{label:"Minutos",val:historico.reduce((s,h)=>s+(h.duracao||0),0),color:"#059669"}].map(s => (
           <Card key={s.label} className="text-center p-3">
             <div className="text-xl font-black" style={{ color: s.color }}>{s.val}</div>
             <div className="text-xs text-[#c4a0b5] mt-0.5">{s.label}</div>
@@ -622,9 +636,7 @@ function Historico() {
               <button className="w-full flex items-center justify-between" onClick={() => setAberto(open ? null : h.id)}>
                 <div className="flex items-center gap-3 text-left">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black flex-shrink-0"
-                    style={{ background: (t?.cor || "#d63384") + "18", color: t?.cor || "#d63384" }}>
-                    {h.letra}
-                  </div>
+                    style={{ background: (t?.cor || "#d63384") + "18", color: t?.cor || "#d63384" }}>{h.letra}</div>
                   <div>
                     <p className="text-sm font-semibold text-[#2d1b2e]">{h.nome}</p>
                     <p className="text-xs text-[#c4a0b5]">{fmt(h.data)} · {h.totalSeries} séries{h.duracao ? ` · ${h.duracao} min` : ""}</p>
@@ -662,11 +674,11 @@ function Historico() {
   );
 }
 
-/* ─── App principal ─────────────────────────────────────── */
+/* ─── App ─── */
 const PAGES = [
-  { id: "home",      label: "Início",    icon: "🏠" },
-  { id: "treino",    label: "Treino",    icon: "💪" },
-  { id: "dieta",     label: "Dieta",     icon: "🥗" },
+  { id: "home", label: "Início", icon: "🏠" },
+  { id: "treino", label: "Treino", icon: "💪" },
+  { id: "dieta", label: "Dieta", icon: "🥗" },
   { id: "historico", label: "Histórico", icon: "📋" },
 ];
 
