@@ -761,12 +761,131 @@ const PROJECAO = [
   { mes: "Mês 12", min: 2000, max: 5000, fase: "Maturidade", foco: "Renda passiva + parcerias fixas" },
 ];
 
+/* ─── Dados Pinterest ─── */
+const PINTEREST_STATS = [
+  { valor: "46M", desc: "usuários ativos mensais no Brasil", fonte: "Pinterest / SproutSocial 2025", cor: "#e60023" },
+  { valor: "85%", desc: "dos usuários semanais compraram algo baseado em Pins", fonte: "Pinterest Business 2025", cor: "#e60023" },
+  { valor: "93%", desc: "usam o Pinterest para planejar compras", fonte: "Marketing LTB 2026", cor: "#e60023" },
+  { valor: "80%", desc: "mais gasto mensal vs usuários de outras plataformas", fonte: "Searchlab 2026", cor: "#e60023" },
+  { valor: "2.3x", desc: "maior valor de conversão vs outras redes sociais", fonte: "Pinterest Ads Data 2025", cor: "#e60023" },
+  { valor: "96%", desc: "das buscas são sem marca — qualquer conta tem chance igual", fonte: "SproutSocial 2026", cor: "#7c3aed" },
+  { valor: "40%", desc: "maior ticket médio de compra vs outras plataformas", fonte: "Charle Agency 2026", cor: "#e60023" },
+  { valor: "12–18", desc: "meses de vida útil de um Pin otimizado (vs 24h no TikTok)", fonte: "SEO Sherpa 2025", cor: "#059669" },
+];
+
+const PINTEREST_CASOS = [
+  {
+    titulo: "E-commerce de Decoração",
+    resultado: "De R$100 para R$115.000/mês",
+    prazo: "4 meses",
+    detalhe: "Cliente com zero presença no Pinterest saiu de R$100/mês para mais de R$115.000 em receita em apenas 4 meses com pins de produtos e tráfego orgânico.",
+    fonte: "Evolut Agency Case Study 2024",
+    cor: "#059669",
+  },
+  {
+    titulo: "Criadora Beauty (By Mable Grace)",
+    resultado: "~R$45.000/mês em afiliados",
+    prazo: "Recorrente",
+    detalhe: "800.000 visualizações mensais no Pinterest, todos os pins linkando para reviews de produtos Amazon. Com 0,01% de conversão e ticket médio de R$5 de comissão = R$40k+/mês.",
+    fonte: "AffiliateMarketingClues Case Study 2025",
+    cor: "#e60023",
+  },
+  {
+    titulo: "Nano Influencer Beleza (perfil típico)",
+    resultado: "R$100–500/mês",
+    prazo: "Primeiros 6 meses",
+    detalhe: "Semanas 1–8: R$0 (fase de construção). Meses 2–4: R$50–200. Meses 4–6: R$100–500+. Com consistência de 5–10 pins/semana e links afiliados em todos os pins.",
+    fonte: "Shopify Brasil / Fractalmax 2025",
+    cor: "#ff9900",
+  },
+  {
+    titulo: "Tendências Beauty 2025–2026",
+    resultado: "Nichos em explosão",
+    prazo: "Agora",
+    detalhe: "Buscas em alta: 'honey brown curls' +7.770%, 'fox hair color' +1.530%, 'bow nail designs' +2.220%. Quem cria conteúdo agora captura tráfego crescente.",
+    fonte: "Pinterest Trends Report 2025",
+    cor: "#d63384",
+  },
+];
+
+const PINTEREST_SEO = [
+  {
+    etapa: "1. Perfil Otimizado",
+    icon: "👤",
+    itens: [
+      "Nome do perfil: inclua palavras-chave (ex: 'Beleza & Lifestyle | Dicas de Moda e Skincare')",
+      "Bio: 160 caracteres com palavras-chave naturais + localização 'Brasil'",
+      "Foto de perfil: rosto nítido (maior confiança = mais follows)",
+      "URL do site: use seu Linktree/Beacons com links afiliados",
+    ],
+  },
+  {
+    etapa: "2. Boards Estratégicos",
+    icon: "📌",
+    itens: [
+      "Crie 8–12 boards com nomes de palavras-chave longas (ex: 'Skincare Rotina Diária Para Pele Oleosa')",
+      "Adicione descrição em cada board com 2–3 palavras-chave naturais",
+      "Board de boas-vindas sempre no topo com seu melhor conteúdo",
+      "Separe por nicho: 3 de Beleza, 3 de Moda, 3 de Fitness",
+    ],
+  },
+  {
+    etapa: "3. Título do Pin",
+    icon: "✍️",
+    itens: [
+      "100 caracteres máximos — coloque a palavra-chave principal nos primeiros 40",
+      "Formato que funciona: '[Resultado] + [Produto/Método] + para [Público]'",
+      "Exemplo: 'Pele Vidro em 7 Dias: Rotina Skincare Noturna para Pele Seca'",
+      "Evite clickbait — Pinterest penaliza pins com alto bounce rate",
+    ],
+  },
+  {
+    etapa: "4. Descrição do Pin",
+    icon: "📝",
+    itens: [
+      "300–450 caracteres = sweet spot (visível em busca + densidade de keywords)",
+      "Inclua a palavra-chave principal nas primeiras 2 frases naturalmente",
+      "Adicione 2–3 palavras-chave secundárias ao longo do texto",
+      "Termine com CTA: 'Link na bio para ver todos os produtos!'",
+      "Não use listas com # ou emojis excessivos — prefira texto fluido",
+    ],
+  },
+  {
+    etapa: "5. Imagem do Pin",
+    icon: "🖼️",
+    itens: [
+      "Formato vertical obrigatório: 1000×1500px (ratio 2:3) — 89% dos pins virais são verticais",
+      "Texto na imagem com fonte grande e legível (leitura no mobile)",
+      "Cores vibrantes e contraste alto — pins claros performam melhor em beleza",
+      "Mostre o produto ou resultado real — não use imagens genéricas de banco",
+    ],
+  },
+  {
+    etapa: "6. Frequência & Consistência",
+    icon: "📅",
+    itens: [
+      "Mínimo 5 pins/dia (pode ser repinados + novos) para crescimento rápido",
+      "3–5 pins originais por semana é suficiente para nano influencer",
+      "Poste sempre no mesmo horário — o algoritmo premia regularidade",
+      "Melhor horário no Brasil: 20h–22h (maior engajamento feminino)",
+    ],
+  },
+];
+
+const PINTEREST_KEYWORDS = {
+  Beleza: ["rotina skincare noturna", "pele hidratada", "maquiagem natural dia a dia", "cuidados com o cabelo", "sérum vitamina C", "base para pele oleosa", "lábio hidratado batom", "sobrancelha design"],
+  Moda: ["look do dia trabalho", "outfit casual feminino", "moda primavera verão", "look festa acessível", "calça wide leg combinações", "looks para baixinhas", "moda plus size estilosa", "tendências 2026"],
+  Fitness: ["treino glúteo academia", "dieta saudável simples", "receita proteica fácil", "treino em casa mulher", "pré-treino natural", "suplemento para mulher", "treino HIIT 20 minutos", "barriga seca exercícios"],
+};
+
 /* ─── Página de Afiliadas ─── */
 function Afiliadas() {
   const [aba, setAba] = useState("plano");
   const [checklist, setChecklist] = useState(() => db.get("afil_checklist", []));
   const [programaAberto, setProgramaAberto] = useState(null);
   const [diaAberto, setDiaAberto] = useState(null);
+  const [seoAberto, setSeoAberto] = useState(null);
+  const [kwNicho, setKwNicho] = useState("Beleza");
 
   const toggleCheck = (id) => {
     const novo = checklist.includes(id) ? checklist.filter(x => x !== id) : [...checklist, id];
@@ -781,6 +900,7 @@ function Afiliadas() {
     { id: "programas", label: "Programas" },
     { id: "calendario", label: "Calendário" },
     { id: "projecao", label: "Receita" },
+    { id: "pinterest", label: "Pinterest" },
   ];
 
   const nichoColor = { "Beleza": "#d63384", "Moda": "#7c3aed", "Fitness": "#059669", "Todos": "#0369a1" };
@@ -1141,6 +1261,165 @@ function Afiliadas() {
               </div>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* ── ABA: PINTEREST ── */}
+      {aba === "pinterest" && (
+        <div className="space-y-4">
+
+          {/* Cabeçalho Pinterest */}
+          <Card style={{ background: "linear-gradient(135deg, #e6002308, #e6002314)", borderColor: "#e6002330" }}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                style={{ background: "#e60023", color: "white" }}>P</div>
+              <div>
+                <p className="text-sm font-bold text-[#2d1b2e]">Pinterest como Motor de Renda Passiva</p>
+                <p className="text-xs text-[#c4a0b5]">Tráfego evergreen · SEO visual · 12–18 meses de vida útil</p>
+              </div>
+            </div>
+            <p className="text-xs text-[#9b7090]">
+              Diferente do TikTok (vida útil de 24h), um Pin otimizado continua gerando cliques e comissões por <span className="font-bold text-[#e60023]">1 a 2 anos</span>. É a única plataforma onde o esforço de hoje gera renda em 2027.
+            </p>
+          </Card>
+
+          {/* Dados históricos */}
+          <div>
+            <p className="text-xs font-bold text-[#c4a0b5] uppercase tracking-wider mb-2">Dados & Estatísticas Reais</p>
+            <div className="grid grid-cols-2 gap-2">
+              {PINTEREST_STATS.map((s, i) => (
+                <Card key={i} className="p-3">
+                  <div className="text-xl font-black mb-0.5" style={{ color: s.cor }}>{s.valor}</div>
+                  <p className="text-xs text-[#2d1b2e] leading-tight mb-1">{s.desc}</p>
+                  <p className="text-[10px] text-[#d4b8c8]">{s.fonte}</p>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Casos reais */}
+          <div>
+            <p className="text-xs font-bold text-[#c4a0b5] uppercase tracking-wider mb-2">Casos Reais de Resultado</p>
+            <div className="space-y-3">
+              {PINTEREST_CASOS.map((c, i) => (
+                <Card key={i}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <p className="text-sm font-bold text-[#2d1b2e]">{c.titulo}</p>
+                      <p className="text-[10px] text-[#c4a0b5] mt-0.5">{c.fonte}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-black" style={{ color: c.cor }}>{c.resultado}</p>
+                      <p className="text-[10px] text-[#c4a0b5]">{c.prazo}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-[#9b7090] leading-relaxed">{c.detalhe}</p>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Guia SEO passo a passo */}
+          <div>
+            <p className="text-xs font-bold text-[#c4a0b5] uppercase tracking-wider mb-2">Guia SEO do Pinterest</p>
+            <div className="space-y-2">
+              {PINTEREST_SEO.map((etapa) => {
+                const aberto = seoAberto === etapa.etapa;
+                return (
+                  <Card key={etapa.etapa}>
+                    <button className="w-full flex items-center justify-between" onClick={() => setSeoAberto(aberto ? null : etapa.etapa)}>
+                      <div className="flex items-center gap-3 text-left">
+                        <span className="text-xl">{etapa.icon}</span>
+                        <span className="text-sm font-bold text-[#2d1b2e]">{etapa.etapa}</span>
+                      </div>
+                      <span className="text-[#d4b8c8] text-xs flex-shrink-0">{aberto ? "▲" : "▼"}</span>
+                    </button>
+                    {aberto && (
+                      <div className="mt-3 border-t border-[#fde8f0] pt-3 space-y-2">
+                        {etapa.itens.map((item, i) => (
+                          <div key={i} className="flex items-start gap-2 text-xs text-[#6b4e5e]">
+                            <span className="text-[#e60023] flex-shrink-0 mt-0.5">•</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Banco de keywords */}
+          <div>
+            <p className="text-xs font-bold text-[#c4a0b5] uppercase tracking-wider mb-2">Banco de Palavras-Chave</p>
+            <div className="flex gap-2 mb-3">
+              {Object.keys(PINTEREST_KEYWORDS).map(n => (
+                <button key={n} onClick={() => setKwNicho(n)}
+                  className="flex-1 py-1.5 rounded-xl text-xs font-bold border-2 transition-all"
+                  style={kwNicho === n
+                    ? { borderColor: "#e60023", background: "#e6002314", color: "#e60023" }
+                    : { borderColor: "#fde8f0", background: "white", color: "#c4a0b5" }}>
+                  {n}
+                </button>
+              ))}
+            </div>
+            <Card>
+              <p className="text-xs text-[#c4a0b5] mb-2">Copie e use nos títulos e descrições dos seus Pins:</p>
+              <div className="flex flex-wrap gap-2">
+                {PINTEREST_KEYWORDS[kwNicho].map((kw, i) => (
+                  <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full"
+                    style={{ background: "#e6002310", color: "#e60023", border: "1px solid #e6002325" }}>
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Comparativo Pinterest vs TikTok */}
+          <Card>
+            <h3 className="text-sm font-bold text-[#2d1b2e] mb-3">Pinterest vs TikTok — Papel de Cada Um</h3>
+            <div className="space-y-2 text-xs">
+              {[
+                { plat: "TikTok", papel: "Descoberta rápida", vida: "24–48h", foco: "Volume, viralizar, novos seguidores", cor: "#2d1b2e" },
+                { plat: "Pinterest", papel: "Renda passiva", vida: "12–18 meses", foco: "SEO, tráfego contínuo, conversão", cor: "#e60023" },
+              ].map(p => (
+                <div key={p.plat} className="rounded-xl p-3 border border-[#fde8f0] bg-[#fff8fa]">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-black" style={{ color: p.cor }}>{p.plat}</span>
+                    <span className="text-[10px] text-[#c4a0b5]">vida do conteúdo: <b>{p.vida}</b></span>
+                  </div>
+                  <p className="text-[#9b7090]"><span className="font-bold text-[#2d1b2e]">Papel: </span>{p.papel}</p>
+                  <p className="text-[#9b7090] mt-0.5">{p.foco}</p>
+                </div>
+              ))}
+              <p className="text-[#9b7090] pt-1">
+                <span className="font-bold text-[#2d1b2e]">Sinergia ideal:</span> crie o TikTok hoje → salve o mesmo conteúdo como Pin no Pinterest → o TikTok viraliza agora, o Pin converte por 18 meses.
+              </p>
+            </div>
+          </Card>
+
+          {/* Checklist de início no Pinterest */}
+          <Card className="bg-[#fff0f5]">
+            <h3 className="text-sm font-bold text-[#e60023] mb-3">Checklist: Primeiros 7 Dias no Pinterest</h3>
+            <div className="space-y-1.5 text-xs text-[#9b7090]">
+              {[
+                "Dia 1: Criar conta comercial (Pinterest for Business) — gratuito",
+                "Dia 1: Otimizar bio, foto e URL (Linktree com links afiliados)",
+                "Dia 2: Criar 9 boards com nomes de palavras-chave longas",
+                "Dia 2–3: Criar 15 pins iniciais (5 por nicho) com links afiliados",
+                "Dia 4–7: Postar 3–5 pins novos por dia + repinar conteúdo relevante",
+                "Dia 7: Instalar Pinterest Tag no site/Linktree para rastrear conversões",
+              ].map((t, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-[#e6002318] text-[#e60023] flex items-center justify-center text-[10px] font-bold flex-shrink-0">{i + 1}</span>
+                  <span>{t}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
         </div>
       )}
     </div>
