@@ -674,12 +674,485 @@ function Historico() {
   );
 }
 
+/* ─── Dados estratégicos de afiliadas ─── */
+const PROGRAMAS = [
+  {
+    id: "shopee",
+    nome: "Shopee Afiliados",
+    categoria: "Marketplace",
+    comissao: "5–12%",
+    cor: "#ee4d2d",
+    dificuldade: "Fácil",
+    prazo: "Aprovação imediata",
+    nichos: ["Beleza", "Moda", "Fitness"],
+    pros: ["Aprovação rápida", "Catálogo enorme", "Links fáceis de gerar", "Pagamento mensal"],
+    inicio: "1º Prioridade — comece aqui",
+    passos: ["Acesse affiliate.shopee.com.br", "Cadastre-se com CPF e dados bancários", "Instale o app Shopee Parceiros", "Gere links de qualquer produto"],
+  },
+  {
+    id: "amazon",
+    nome: "Amazon Associates",
+    categoria: "Marketplace",
+    comissao: "3–10%",
+    cor: "#ff9900",
+    dificuldade: "Fácil",
+    prazo: "2–3 dias",
+    nichos: ["Beleza", "Fitness"],
+    pros: ["Alta credibilidade", "Boa variedade beauty/fitness", "Dashboard completo"],
+    inicio: "2ª Prioridade",
+    passos: ["Acesse affiliate-program.amazon.com.br", "Crie conta com conta Amazon existente", "Aguarde aprovação (2–3 dias)", "Crie links personalizados"],
+  },
+  {
+    id: "hotmart",
+    nome: "Hotmart",
+    categoria: "Produtos Digitais",
+    comissao: "30–60%",
+    cor: "#ff4d2b",
+    dificuldade: "Médio",
+    prazo: "Aprovação por produto",
+    nichos: ["Fitness", "Beleza"],
+    pros: ["Comissões altíssimas (R$50–R$300/venda)", "Produtos de qualidade", "Pagamento rápido"],
+    inicio: "3ª Prioridade — alta rentabilidade",
+    passos: ["Acesse hotmart.com e crie conta Afiliada", "Pesquise produtos de fitness e beleza", "Peça aprovação ao produtor", "Promova com link de afiliado"],
+  },
+  {
+    id: "renner",
+    nome: "Renner Afiliados",
+    categoria: "Moda",
+    comissao: "5–8%",
+    cor: "#e63946",
+    dificuldade: "Médio",
+    prazo: "3–5 dias",
+    nichos: ["Moda"],
+    pros: ["Marca conhecida", "Produtos sazonais", "Boa conversão em moda"],
+    inicio: "4ª Prioridade — moda",
+    passos: ["Acesse Lomadee ou Awin (Renner usa essas redes)", "Cadastre seu canal (TikTok/Pinterest)", "Aguarde aprovação", "Gere links de peças específicas"],
+  },
+];
+
+const CHECKLIST_ONBOARDING = [
+  { id: "bio", grupo: "Perfil", texto: "Otimizar bio do TikTok com foco em 'Beleza • Moda • Fitness'" },
+  { id: "linktree", grupo: "Perfil", texto: "Criar Linktree ou Beacons.ai (agrupa todos os links)" },
+  { id: "shopee_cad", grupo: "Programas", texto: "Cadastrar no Shopee Afiliados" },
+  { id: "amazon_cad", grupo: "Programas", texto: "Cadastrar no Amazon Associates" },
+  { id: "hotmart_cad", grupo: "Programas", texto: "Criar conta na Hotmart como afiliada" },
+  { id: "pilares", grupo: "Conteúdo", texto: "Definir os 3 pilares de conteúdo semanal" },
+  { id: "primeiro_video", grupo: "Conteúdo", texto: "Criar primeiro TikTok com produto afiliado" },
+  { id: "primeiro_pin", grupo: "Conteúdo", texto: "Criar 5 pins no Pinterest com links afiliados" },
+  { id: "planilha", grupo: "Gestão", texto: "Criar planilha de controle de receita" },
+  { id: "meta30", grupo: "Gestão", texto: "Definir meta de R$300 para o primeiro mês" },
+];
+
+const CALENDARIO = [
+  { dia: "Seg", tema: "Skincare Routine", nicho: "Beleza", formato: "TikTok 30–60s", hook: "\"O produto que mudou minha pele...\"", programas: ["Shopee", "Amazon"] },
+  { dia: "Ter", tema: "Look do Dia", nicho: "Moda", formato: "TikTok GRWM", hook: "\"Look completo por menos de R$X...\"", programas: ["Renner", "Shopee"] },
+  { dia: "Qua", tema: "Treino + Produto", nicho: "Fitness", formato: "TikTok + Pin", hook: "\"Sem isso meu treino não é o mesmo...\"", programas: ["Amazon", "Shopee"] },
+  { dia: "Qui", tema: "Review Honesto", nicho: "Beleza", formato: "TikTok 60s", hook: "\"Testei por 30 dias e...\"", programas: ["Hotmart", "Amazon"] },
+  { dia: "Sex", tema: "Top 5 da Semana", nicho: "Todos", formato: "TikTok + 5 Pins", hook: "\"5 produtos que comprei e amei...\"", programas: ["Shopee", "Amazon"] },
+  { dia: "Sáb", tema: "Pinterest SEO", nicho: "Todos", formato: "10–15 Pins", hook: "Palavras-chave longas + links diretos", programas: ["Todos"] },
+  { dia: "Dom", tema: "Planejamento", nicho: "—", formato: "Bastidores", hook: "Preparar conteúdo da semana seguinte", programas: [] },
+];
+
+const PROJECAO = [
+  { mes: "Mês 1", min: 100, max: 300, fase: "Aprendizado", foco: "Onboarding + primeiros links" },
+  { mes: "Mês 2", min: 250, max: 600, fase: "Tração", foco: "Consistência + otimização" },
+  { mes: "Mês 3", min: 500, max: 1000, fase: "Crescimento", foco: "Pinterest evergreen gera tráfego passivo" },
+  { mes: "Mês 6", min: 1000, max: 3000, fase: "Escala", foco: "Hotmart + produtos digitais de alto ticket" },
+  { mes: "Mês 12", min: 2000, max: 5000, fase: "Maturidade", foco: "Renda passiva + parcerias fixas" },
+];
+
+/* ─── Página de Afiliadas ─── */
+function Afiliadas() {
+  const [aba, setAba] = useState("plano");
+  const [checklist, setChecklist] = useState(() => db.get("afil_checklist", []));
+  const [programaAberto, setProgramaAberto] = useState(null);
+  const [diaAberto, setDiaAberto] = useState(null);
+
+  const toggleCheck = (id) => {
+    const novo = checklist.includes(id) ? checklist.filter(x => x !== id) : [...checklist, id];
+    setChecklist(novo); db.set("afil_checklist", novo);
+  };
+
+  const grupos = [...new Set(CHECKLIST_ONBOARDING.map(i => i.grupo))];
+  const progresso = Math.round((checklist.length / CHECKLIST_ONBOARDING.length) * 100);
+
+  const ABAS = [
+    { id: "plano", label: "Plano" },
+    { id: "programas", label: "Programas" },
+    { id: "calendario", label: "Calendário" },
+    { id: "projecao", label: "Receita" },
+  ];
+
+  const nichoColor = { "Beleza": "#d63384", "Moda": "#7c3aed", "Fitness": "#059669", "Todos": "#0369a1" };
+
+  return (
+    <div className="p-4 space-y-4 pb-24">
+      <div className="pt-2">
+        <h1 className="text-2xl font-bold text-[#2d1b2e]">Estratégia Afiliada</h1>
+        <p className="text-sm text-[#c4a0b5] mt-0.5">Nano Influencer · Beleza, Moda & Fitness</p>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: "Meta 6 meses", val: "R$3k", sub: "por mês", color: "#d63384" },
+          { label: "Plataformas", val: "TikTok", sub: "+ Pinterest", color: "#7c3aed" },
+          { label: "Setup", val: "1–2h", sub: "por dia", color: "#059669" },
+        ].map(s => (
+          <Card key={s.label} className="text-center p-3">
+            <div className="text-base font-black" style={{ color: s.color }}>{s.val}</div>
+            <div className="text-[10px] text-[#d4b8c8]">{s.sub}</div>
+            <div className="text-[10px] text-[#c4a0b5] mt-0.5">{s.label}</div>
+          </Card>
+        ))}
+      </div>
+
+      {/* Sub-abas */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+        {ABAS.map(a => (
+          <button key={a.id} onClick={() => setAba(a.id)}
+            className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all"
+            style={aba === a.id
+              ? { borderColor: "#d63384", background: "#d6338418", color: "#d63384" }
+              : { borderColor: "#fde8f0", background: "white", color: "#c4a0b5" }}>
+            {a.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── ABA: PLANO (Onboarding Checklist) ── */}
+      {aba === "plano" && (
+        <div className="space-y-4">
+          <Card>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-bold text-[#2d1b2e]">Checklist de Onboarding</span>
+              <span className="text-sm font-bold text-[#d63384]">{checklist.length}/{CHECKLIST_ONBOARDING.length}</span>
+            </div>
+            <div className="w-full bg-[#fde8f0] rounded-full h-2.5 mb-1">
+              <div className="h-2.5 rounded-full transition-all" style={{ width: `${progresso}%`, background: "linear-gradient(90deg, #d63384, #7c3aed)" }} />
+            </div>
+            <p className="text-xs text-[#c4a0b5]">{progresso}% completo</p>
+          </Card>
+
+          {grupos.map(grupo => (
+            <div key={grupo}>
+              <p className="text-xs font-bold text-[#c4a0b5] uppercase tracking-wider mb-2">{grupo}</p>
+              <div className="space-y-2">
+                {CHECKLIST_ONBOARDING.filter(i => i.grupo === grupo).map(item => {
+                  const feito = checklist.includes(item.id);
+                  return (
+                    <button key={item.id} onClick={() => toggleCheck(item.id)}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${feito ? "border-[#d6338440] bg-[#d6338408]" : "border-[#fde8f0] bg-white"}`}>
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${feito ? "border-[#d63384] bg-[#d63384]" : "border-[#fde8f0]"}`}>
+                        {feito && <span className="text-white text-xs font-bold">✓</span>}
+                      </div>
+                      <span className={`text-sm ${feito ? "line-through text-[#c4a0b5]" : "text-[#2d1b2e]"}`}>{item.texto}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <Card className="bg-[#fff0f5]">
+            <h3 className="text-sm font-bold text-[#d63384] mb-2">Sua Vantagem como Nano Influencer</h3>
+            <div className="space-y-2 text-xs text-[#9b7090]">
+              {[
+                "Engajamento de 5–8% (mega influencers têm 1–2%) — sua audiência CONFIA em você",
+                "Produtos indicados por você têm mais conversão que influencers grandes",
+                "Marcas valorizam nano influencers pelo baixo custo e alta autenticidade",
+                "Shopee e Amazon aprovam nano influencers sem complicação",
+              ].map((d, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="text-[#d63384] flex-shrink-0">✦</span>
+                  <span>{d}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className="text-sm font-bold text-[#2d1b2e] mb-3">Ângulo Estratégico: Glow Up Completo</h3>
+            <p className="text-xs text-[#9b7090] mb-3">
+              Com 3 nichos e pouco tempo, o segredo é uma <span className="font-bold text-[#d63384]">narrativa única</span> que conecta tudo:
+              beleza, moda e fitness como pilares da <span className="font-bold">transformação pessoal</span>.
+            </p>
+            <div className="space-y-2">
+              {[
+                { icon: "💄", titulo: "Beleza", desc: "Skincare, maquiagem e cuidados que fazem diferença" },
+                { icon: "👗", titulo: "Moda", desc: "Looks acessíveis que valorizam qualquer corpo" },
+                { icon: "💪", titulo: "Fitness", desc: "Treino + produtos que potencializam resultados" },
+              ].map(p => (
+                <div key={p.titulo} className="flex items-start gap-3 bg-[#fff8fa] rounded-xl p-3">
+                  <span className="text-xl">{p.icon}</span>
+                  <div>
+                    <p className="text-sm font-bold text-[#2d1b2e]">{p.titulo}</p>
+                    <p className="text-xs text-[#c4a0b5]">{p.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ── ABA: PROGRAMAS ── */}
+      {aba === "programas" && (
+        <div className="space-y-3">
+          <Card className="bg-[#fff0f5]">
+            <p className="text-xs text-[#9b7090]">
+              <span className="font-bold text-[#d63384]">Estratégia:</span> Comece pelo Shopee (aprovação imediata) + Amazon. Só avance para Hotmart após gerar as primeiras vendas.
+            </p>
+          </Card>
+
+          {PROGRAMAS.map((prog, idx) => {
+            const aberto = programaAberto === prog.id;
+            return (
+              <Card key={prog.id}>
+                <button className="w-full flex items-center justify-between" onClick={() => setProgramaAberto(aberto ? null : prog.id)}>
+                  <div className="flex items-center gap-3 text-left">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0"
+                      style={{ background: prog.cor + "18", color: prog.cor }}>{idx + 1}</div>
+                    <div>
+                      <p className="text-sm font-bold text-[#2d1b2e]">{prog.nome}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs font-bold" style={{ color: prog.cor }}>{prog.comissao}</span>
+                        <span className="text-xs text-[#c4a0b5]">· {prog.dificuldade}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: prog.cor + "18", color: prog.cor }}>{prog.categoria}</span>
+                    <span className="text-[#d4b8c8] text-xs">{aberto ? "▲" : "▼"}</span>
+                  </div>
+                </button>
+
+                {aberto && (
+                  <div className="mt-3 border-t border-[#fde8f0] pt-3 space-y-3">
+                    <div className="bg-[#fff8fa] rounded-xl p-3">
+                      <p className="text-xs font-bold text-[#d63384] mb-1">{prog.inicio}</p>
+                      <p className="text-xs text-[#c4a0b5]">Prazo: {prog.prazo}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#c4a0b5] mb-1.5">Como cadastrar:</p>
+                      <div className="space-y-1.5">
+                        {prog.passos.map((p, i) => (
+                          <div key={i} className="flex items-start gap-2 text-xs text-[#6b4e5e]">
+                            <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                              style={{ background: prog.cor + "18", color: prog.cor }}>{i + 1}</span>
+                            {p}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-[#c4a0b5] mb-1.5">Vantagens:</p>
+                      <div className="space-y-1">
+                        {prog.pros.map((p, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs text-[#9b7090]">
+                            <span style={{ color: prog.cor }}>✓</span>{p}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {prog.nichos.map(n => (
+                        <span key={n} className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={{ background: (nichoColor[n] || "#d63384") + "18", color: nichoColor[n] || "#d63384" }}>{n}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+
+          <Card className="bg-[#fff8fa]">
+            <h3 className="text-sm font-bold text-[#2d1b2e] mb-2">Ferramentas Essenciais</h3>
+            <div className="space-y-2 text-xs text-[#9b7090]">
+              {[
+                { nome: "Beacons.ai ou Linktree", desc: "Link na bio que centraliza todos os afiliados" },
+                { nome: "Canva", desc: "Criar capas de Pin para o Pinterest (grátis)" },
+                { nome: "CapCut", desc: "Editar TikToks com legendas automáticas" },
+                { nome: "Notion / Planilha", desc: "Controle de links, comissões e conteúdo" },
+              ].map(f => (
+                <div key={f.nome} className="flex items-start gap-2 bg-white rounded-xl p-2.5 border border-[#fde8f0]">
+                  <span className="text-[#d63384] flex-shrink-0">→</span>
+                  <div>
+                    <span className="font-bold text-[#2d1b2e]">{f.nome}: </span>
+                    <span>{f.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ── ABA: CALENDÁRIO ── */}
+      {aba === "calendario" && (
+        <div className="space-y-3">
+          <Card className="bg-[#fff0f5]">
+            <p className="text-xs text-[#9b7090]">
+              <span className="font-bold text-[#d63384]">Regra de ouro:</span> 1 TikTok/dia + 3–5 pins/dia no Pinterest. Com 1–2h você consegue criar, editar e postar tudo.
+            </p>
+          </Card>
+
+          {CALENDARIO.map(dia => {
+            const aberto = diaAberto === dia.dia;
+            const cor = nichoColor[dia.nicho] || "#d63384";
+            return (
+              <Card key={dia.dia}>
+                <button className="w-full flex items-center justify-between" onClick={() => setDiaAberto(aberto ? null : dia.dia)}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0"
+                      style={{ background: cor + "18", color: cor }}>{dia.dia}</div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-[#2d1b2e]">{dia.tema}</p>
+                      <p className="text-xs text-[#c4a0b5]">{dia.formato}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {dia.nicho !== "—" && (
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: cor + "18", color: cor }}>{dia.nicho}</span>
+                    )}
+                    <span className="text-[#d4b8c8] text-xs">{aberto ? "▲" : "▼"}</span>
+                  </div>
+                </button>
+
+                {aberto && (
+                  <div className="mt-3 border-t border-[#fde8f0] pt-3 space-y-2.5">
+                    <div className="bg-[#fff8fa] rounded-xl p-3">
+                      <p className="text-xs font-bold text-[#c4a0b5] mb-1">Hook sugerido:</p>
+                      <p className="text-sm font-medium text-[#2d1b2e]">{dia.hook}</p>
+                    </div>
+                    {dia.programas.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-[#c4a0b5] mb-1.5">Programas para usar:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {dia.programas.map(p => (
+                            <span key={p} className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#fde8f0] text-[#d63384]">{p}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {dia.dia === "Dom" && (
+                      <div className="text-xs text-[#9b7090] space-y-1">
+                        <p className="font-bold text-[#2d1b2e]">Tarefas do domingo:</p>
+                        {["Listar 5–10 produtos para promover na semana", "Gerar todos os links com antecedência", "Salvar os links no Linktree/Beacons", "Gravar 2–3 TikToks em lote (se possível)"].map((t, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="text-[#d63384]">•</span>{t}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+
+          <Card>
+            <h3 className="text-sm font-bold text-[#2d1b2e] mb-3">Formato dos TikToks que Convertem</h3>
+            <div className="space-y-2 text-xs text-[#9b7090]">
+              {[
+                { passo: "0–3s", desc: "Hook forte: \"Nunca mais comprei errado de beleza...\"" },
+                { passo: "3–15s", desc: "Problema + solução: mostre o produto em uso" },
+                { passo: "15–30s", desc: "Resultado: antes/depois ou reação genuína" },
+                { passo: "30–45s", desc: "CTA: \"Link na bio pra pegar o meu!\"" },
+              ].map(f => (
+                <div key={f.passo} className="flex items-start gap-3 bg-[#fff8fa] rounded-xl p-2.5">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#d6338418] text-[#d63384] flex-shrink-0">{f.passo}</span>
+                  <span>{f.desc}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ── ABA: PROJEÇÃO DE RECEITA ── */}
+      {aba === "projecao" && (
+        <div className="space-y-3">
+          <Card className="bg-[#fff0f5]">
+            <p className="text-xs text-[#9b7090]">
+              Projeção conservadora baseada em nano influencer (até 10k) com TikTok + Pinterest, 1–2h/dia, consistência diária.
+            </p>
+          </Card>
+
+          {PROJECAO.map(m => {
+            const largura = Math.min(100, (m.max / 5000) * 100);
+            return (
+              <Card key={m.mes}>
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <span className="text-sm font-bold text-[#2d1b2e]">{m.mes}</span>
+                    <span className="text-xs text-[#c4a0b5] ml-2">· {m.fase}</span>
+                  </div>
+                  <span className="text-sm font-black text-[#d63384]">R${m.min}–R${m.max}</span>
+                </div>
+                <div className="w-full bg-[#fde8f0] rounded-full h-2 mb-2">
+                  <div className="h-2 rounded-full transition-all"
+                    style={{ width: `${largura}%`, background: "linear-gradient(90deg, #d63384, #7c3aed)" }} />
+                </div>
+                <p className="text-xs text-[#c4a0b5]">{m.foco}</p>
+              </Card>
+            );
+          })}
+
+          <Card>
+            <h3 className="text-sm font-bold text-[#2d1b2e] mb-3">Como Chegar em R$5.000/mês</h3>
+            <div className="space-y-2 text-xs text-[#9b7090]">
+              {[
+                { icon: "1", titulo: "Consistência (meses 1–3)", desc: "Postar diariamente, mesmo que imperfeito. Volume cria algoritmo." },
+                { icon: "2", titulo: "Pinterest Evergreen (mês 3+)", desc: "Pins bem otimizados trazem tráfego 12–18 meses. É renda passiva real." },
+                { icon: "3", titulo: "Hotmart de Alto Ticket (mês 4+)", desc: "1 curso de R$497 = R$200+ de comissão. 25 vendas/mês = R$5.000." },
+                { icon: "4", titulo: "Parcerias Fixas (mês 6+)", desc: "Marcas que pagam mensalmente por posts. Mais previsível que comissão." },
+              ].map(e => (
+                <div key={e.icon} className="flex items-start gap-3 bg-[#fff8fa] rounded-xl p-3 border border-[#fde8f0]">
+                  <span className="w-6 h-6 rounded-full bg-[#d6338418] text-[#d63384] flex items-center justify-center text-xs font-black flex-shrink-0">{e.icon}</span>
+                  <div>
+                    <p className="font-bold text-[#2d1b2e] mb-0.5">{e.titulo}</p>
+                    <p>{e.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="bg-[#fff0f5]">
+            <h3 className="text-sm font-bold text-[#d63384] mb-2">Simulação Realista — Mês 3</h3>
+            <div className="space-y-1.5 text-xs text-[#9b7090]">
+              {[
+                { fonte: "Shopee (50 cliques/dia × 3% conv. × R$15 ticket × 8%)", val: "R$180" },
+                { fonte: "Amazon (30 cliques/dia × 2% conv. × R$80 ticket × 5%)", val: "R$144" },
+                { fonte: "Pinterest (tráfego passivo acumulado)", val: "R$80" },
+                { fonte: "Hotmart (2 vendas × R$100 comissão)", val: "R$200" },
+              ].map(s => (
+                <div key={s.fonte} className="flex justify-between items-start gap-2 bg-white rounded-lg p-2 border border-[#fde8f0]">
+                  <span className="flex-1">{s.fonte}</span>
+                  <span className="font-bold text-[#059669] flex-shrink-0">{s.val}</span>
+                </div>
+              ))}
+              <div className="flex justify-between items-center bg-[#d6338418] rounded-lg p-2 mt-1">
+                <span className="font-bold text-[#2d1b2e]">Total estimado</span>
+                <span className="font-black text-[#d63384]">≈ R$604/mês</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── App ─── */
 const PAGES = [
   { id: "home", label: "Início", icon: "🏠" },
   { id: "treino", label: "Treino", icon: "💪" },
   { id: "dieta", label: "Dieta", icon: "🥗" },
-  { id: "historico", label: "Histórico", icon: "📋" },
+  { id: "afiliadas", label: "Afiliadas", icon: "💰" },
 ];
 
 export default function App() {
@@ -690,7 +1163,7 @@ export default function App() {
         {page === "home"       && <Home setPage={setPage} />}
         {page === "treino"     && <Treino />}
         {page === "dieta"      && <Dieta />}
-        {page === "historico"  && <Historico />}
+        {page === "afiliadas"  && <Afiliadas />}
       </div>
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-[#fde8f0] z-40 shadow-[0_-4px_20px_rgba(214,51,132,0.08)]">
         <div className="flex">
