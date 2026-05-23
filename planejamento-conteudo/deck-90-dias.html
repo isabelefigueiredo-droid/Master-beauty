@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>That Home Office Girl · 90 Dias de Conteúdo</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream: #FDFAF6;
+  --white: #FFFFFF;
+  --pink: #C9909F;
+  --pink-light: #F2E8EC;
+  --pink-mid: #E0B8C4;
+  --sage: #8FAF9E;
+  --sage-light: #EBF2EE;
+  --gold: #C4A055;
+  --gold-light: #F7F0E0;
+  --mauve: #9E90AF;
+  --mauve-light: #EDE8F2;
+  --terra: #B88870;
+  --terra-light: #F5EDE8;
+  --brown: #28190E;
+  --brown-mid: #7A6050;
+  --brown-light: #B8A090;
+  --border: #EDE4D8;
+  --border-soft: #F5F0E8;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--cream);
+  color: var(--brown);
+  line-height: 1.6;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(253,250,246,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  height: 56px;
+  display: flex; align-items: center; gap: 4px;
+  padding: 0 32px;
+  overflow-x: auto;
+}
+nav::-webkit-scrollbar { display: none; }
+nav a {
+  text-decoration: none;
+  color: var(--brown-mid);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  padding: 6px 14px;
+  border-radius: 100px;
+  white-space: nowrap;
+  transition: all .2s;
+  flex-shrink: 0;
+}
+nav a:hover { background: var(--pink-light); color: var(--pink); }
+
+/* ── SECTIONS ── */
+.section {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 80px 40px;
+}
+.section:first-of-type { padding-top: 110px; }
+
+/* ── COVER ── */
+#capa {
+  min-height: 92vh;
+  display: flex; align-items: center;
+  background: linear-gradient(135deg, var(--cream) 0%, var(--pink-light) 50%, var(--gold-light) 100%);
+}
+.cover-inner { max-width: 680px; }
+.tag-pill {
+  display: inline-block;
+  background: var(--pink-light);
+  color: var(--pink);
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 100px;
+  margin-bottom: 28px;
+}
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(44px, 6vw, 76px);
+  font-weight: 700; line-height: 1.05;
+  margin-bottom: 20px;
+}
+h1 em { font-style: italic; color: var(--pink); }
+.cover-sub {
+  font-size: 18px; color: var(--brown-mid);
+  max-width: 480px; line-height: 1.75;
+  margin-bottom: 40px;
+}
+.cover-meta {
+  display: flex; gap: 32px; flex-wrap: wrap;
+}
+.meta-item { display: flex; flex-direction: column; }
+.meta-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brown-light); }
+.meta-value { font-size: 20px; font-weight: 700; font-family: 'Playfair Display', serif; color: var(--brown); }
+
+/* ── SECTION LABELS ── */
+.sec-label {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--brown-light); display: block; margin-bottom: 12px;
+}
+h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(26px, 3.5vw, 40px);
+  font-weight: 600; color: var(--brown);
+  margin-bottom: 8px; line-height: 1.2;
+}
+h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 600;
+  color: var(--brown); margin-bottom: 8px;
+}
+.sec-desc { font-size: 15px; color: var(--brown-mid); max-width: 560px; line-height: 1.7; margin-bottom: 40px; }
+
+hr { border: none; border-top: 1px solid var(--border); margin: 72px 0; }
+
+/* ── NICHO ── */
+.nicho-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; }
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+}
+.card h3 { margin-bottom: 16px; }
+.why-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.why-list li {
+  display: flex; gap: 12px; align-items: flex-start;
+  font-size: 14px; color: var(--brown-mid); line-height: 1.5;
+}
+.why-list li::before {
+  content: '→'; color: var(--pink); font-weight: 700;
+  flex-shrink: 0; margin-top: 1px;
+}
+.usp-box {
+  background: linear-gradient(135deg, var(--pink-light), var(--gold-light));
+  border: 1px solid var(--pink-mid);
+  border-radius: 16px; padding: 24px 28px;
+  margin-top: 24px;
+}
+.usp-box p {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px; font-style: italic;
+  color: var(--brown); line-height: 1.7;
+}
+
+/* ── PILARES ── */
+.pilares-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.pilar {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 18px; padding: 24px 20px;
+  position: relative; overflow: hidden;
+  transition: transform .2s, box-shadow .2s;
+}
+.pilar:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+.pilar::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.pilar.p1::after { background: linear-gradient(90deg, #C9909F, #E0B8C4); }
+.pilar.p2::after { background: linear-gradient(90deg, #8FAF9E, #B5CFC4); }
+.pilar.p3::after { background: linear-gradient(90deg, #C4A055, #DEC080); }
+.pilar.p4::after { background: linear-gradient(90deg, #9E90AF, #BEB0CF); }
+.pilar.p5::after { background: linear-gradient(90deg, #B88870, #D0AA90); }
+.pilar-icon { font-size: 28px; display: block; margin-bottom: 10px; }
+.pilar-pct {
+  font-family: 'Playfair Display', serif;
+  font-size: 34px; font-weight: 700; color: var(--brown); line-height: 1;
+}
+.pilar-name {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--brown-mid); margin: 4px 0 12px;
+}
+.pilar-ex { font-size: 11.5px; color: var(--brown-light); line-height: 1.7; }
+
+/* ── ROTINA DIÁRIA ── */
+.rotina-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.bloco {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 20px; padding: 28px;
+}
+.bloco-title {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--brown-light); margin-bottom: 20px;
+}
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before {
+  content: ''; position: absolute; left: 6px; top: 4px; bottom: 4px;
+  width: 1px; background: var(--border);
+}
+.tl-item { position: relative; margin-bottom: 18px; }
+.tl-item::before {
+  content: ''; position: absolute; left: -24px; top: 5px;
+  width: 7px; height: 7px; border-radius: 50%;
+}
+.tl-item.pink::before { background: var(--pink); }
+.tl-item.sage::before { background: var(--sage); }
+.tl-item.gold::before { background: var(--gold); }
+.tl-item.mauve::before { background: var(--mauve); }
+.tl-time { font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; margin-bottom: 1px; }
+.tl-item.pink .tl-time { color: var(--pink); }
+.tl-item.sage .tl-time { color: var(--sage); }
+.tl-item.gold .tl-time { color: var(--gold); }
+.tl-item.mauve .tl-time { color: var(--mauve); }
+.tl-desc { font-size: 13px; color: var(--brown); font-weight: 500; }
+.tl-sub { font-size: 11.5px; color: var(--brown-light); }
+
+/* ── CALENDÁRIO ── */
+.fase-header {
+  display: flex; align-items: center; gap: 24px;
+  padding: 24px 32px;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 20px; margin-bottom: 24px;
+}
+.fase-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 72px; font-weight: 700;
+  color: var(--border); line-height: 1;
+  flex-shrink: 0;
+}
+.fase-info h2 { font-size: 28px; margin-bottom: 4px; }
+.fase-info p { font-size: 13px; color: var(--brown-mid); }
+.fase-kpis {
+  margin-left: auto; display: flex; gap: 24px; flex-shrink: 0;
+}
+.kpi { text-align: center; }
+.kpi-val { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--brown); }
+.kpi-label { font-size: 10px; color: var(--brown-light); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.leg {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: var(--brown-mid); font-weight: 500;
+}
+.leg-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+}
+.cal-head {
+  text-align: center; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--brown-light); padding: 8px 0;
+}
+.cal-day {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 12px; padding: 10px 9px;
+  min-height: 88px; position: relative;
+  transition: all .15s; cursor: default;
+  border-top: 3px solid transparent;
+}
+.cal-day:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  transform: translateY(-2px);
+}
+.cal-day.grwm    { border-top-color: #C9909F; }
+.cal-day.skincare{ border-top-color: #8FAF9E; }
+.cal-day.look    { border-top-color: #C4A055; }
+.cal-day.review  { border-top-color: #9E90AF; }
+.cal-day.rotina  { border-top-color: #B88870; }
+.cal-day.pets    { border-top-color: #6BAF88; }
+.cal-day.haul    { border-top-color: #D4B560; }
+.cal-day.trend   { border-top-color: #9090C8; }
+.cal-day.marco   { border-top-color: #C4A055; background: var(--gold-light); }
+.cal-num { font-size: 10px; font-weight: 700; color: var(--brown-light); margin-bottom: 4px; }
+.cal-icon { font-size: 15px; display: block; margin-bottom: 3px; }
+.cal-text { font-size: 10.5px; color: var(--brown); line-height: 1.4; font-weight: 500; }
+.cal-sub  { font-size: 9.5px; color: var(--brown-light); margin-top: 3px; display: block; }
+
+/* ── HOOKS ── */
+.hooks-grid { display: grid; gap: 10px; }
+.hook {
+  display: grid; grid-template-columns: 1.2fr 2fr;
+  gap: 20px; align-items: start;
+  background: var(--white); border: 1px solid var(--border);
+  border-left: 3px solid var(--pink);
+  border-radius: 0 14px 14px 0; padding: 16px 20px;
+}
+.hook-pattern { font-size: 13px; font-weight: 600; color: var(--brown); }
+.hook-example { font-size: 13px; color: var(--brown-mid); font-style: italic; line-height: 1.5; }
+
+/* ── INSPIRAÇÕES ── */
+.inspo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.inspo-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 20px; overflow: hidden;
+  text-decoration: none; color: inherit;
+  transition: all .2s; display: block;
+}
+.inspo-card:hover {
+  border-color: var(--pink);
+  box-shadow: 0 8px 28px rgba(201,144,159,.18);
+  transform: translateY(-3px);
+}
+.inspo-thumb {
+  height: 110px; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 44px;
+}
+.inspo-thumb.t1 { background: linear-gradient(135deg, #F2E8EC, #E8D8DF); }
+.inspo-thumb.t2 { background: linear-gradient(135deg, #EBF2EE, #D8EBE3); }
+.inspo-thumb.t3 { background: linear-gradient(135deg, #F7F0E0, #EDE0C4); }
+.inspo-thumb.t4 { background: linear-gradient(135deg, #EDE8F2, #DDD8EF); }
+.inspo-thumb.t5 { background: linear-gradient(135deg, #F5EDE8, #EDD8CC); }
+.inspo-thumb.t6 { background: linear-gradient(135deg, #E8EEF2, #D0DDE8); }
+.inspo-body { padding: 18px 20px; }
+.inspo-label { font-size: 9.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--brown-light); margin-bottom: 5px; }
+.inspo-title { font-size: 14px; font-weight: 600; color: var(--brown); margin-bottom: 5px; line-height: 1.3; }
+.inspo-desc { font-size: 12px; color: var(--brown-mid); line-height: 1.6; margin-bottom: 10px; }
+.inspo-link {
+  font-size: 11px; color: var(--pink); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.inspo-link::after { content: '↗'; }
+
+/* ── FERRAMENTAS ── */
+.tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tool {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: 16px; padding: 18px 20px;
+  display: flex; gap: 14px; align-items: flex-start;
+}
+.tool-icon { font-size: 30px; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+.tool-name { font-size: 14px; font-weight: 600; color: var(--brown); margin-bottom: 3px; }
+.tool-desc { font-size: 12.5px; color: var(--brown-mid); line-height: 1.5; }
+.badge {
+  font-size: 9.5px; font-weight: 700; padding: 2px 8px;
+  border-radius: 100px; display: inline-block; margin-top: 5px;
+  letter-spacing: 0.04em;
+}
+.badge-free { background: #E8F5EC; color: #3A8A50; }
+.badge-paid { background: #FFF3E0; color: #CC8800; }
+
+/* ── METRICS ── */
+.metrics-table {
+  width: 100%; border-collapse: collapse; background: var(--white);
+  border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+}
+.metrics-table th {
+  text-align: left; padding: 14px 20px;
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--brown-light); background: var(--cream);
+  border-bottom: 1px solid var(--border);
+}
+.metrics-table td {
+  padding: 16px 20px; font-size: 13px;
+  border-bottom: 1px solid var(--border-soft); color: var(--brown);
+}
+.metrics-table tr:last-child td { border-bottom: none; }
+.m-val {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px; font-weight: 700;
+}
+.m-v1 { color: var(--brown-light); }
+.m-v2 { color: var(--pink); }
+.m-v3 { color: var(--gold); }
+
+/* ── FOOTER ── */
+footer {
+  text-align: center; padding: 60px 40px;
+  font-size: 12px; color: var(--brown-light);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .pilares-grid { grid-template-columns: repeat(3, 1fr); }
+  .nicho-grid, .rotina-grid, .tools-grid { grid-template-columns: 1fr; }
+  .inspo-grid { grid-template-columns: repeat(2, 1fr); }
+  .fase-kpis { display: none; }
+}
+@media (max-width: 640px) {
+  .section { padding: 60px 20px; }
+  nav { padding: 0 16px; }
+  .cal-grid { grid-template-columns: repeat(4, 1fr); }
+  .hook { grid-template-columns: 1fr; }
+  .inspo-grid { grid-template-columns: 1fr; }
+  .pilares-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ── NAVEGAÇÃO ── -->
+<nav>
+  <a href="#capa">Início</a>
+  <a href="#nicho">Nicho</a>
+  <a href="#pilares">Pilares</a>
+  <a href="#rotina">Rotina</a>
+  <a href="#fase1">Fase 1</a>
+  <a href="#fase2">Fase 2</a>
+  <a href="#fase3">Fase 3</a>
+  <a href="#hooks">Hooks</a>
+  <a href="#inspiracoes">Inspirações</a>
+  <a href="#ferramentas">Ferramentas</a>
+  <a href="#metricas">Métricas</a>
+</nav>
+
+<!-- ══════════════════════════════ CAPA ══════════════════════════════ -->
+<section class="section" id="capa" style="background: linear-gradient(135deg,#FDFAF6 0%,#F2E8EC 55%,#F7F0E0 100%); max-width:100%; padding: 110px 10vw 80px;">
+  <div class="cover-inner">
+    <span class="tag-pill">TikTok + Instagram · 2026</span>
+    <h1>That <em>Home</em><br>Office Girl</h1>
+    <p class="cover-sub">Planejamento completo de conteúdo para 90 dias — nicho, pilares, calendário diário, hooks virais e inspirações.</p>
+    <div class="cover-meta">
+      <div class="meta-item">
+        <span class="meta-label">Duração</span>
+        <span class="meta-value">90 dias</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Plataformas</span>
+        <span class="meta-value">TikTok + IG</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Início</span>
+        <span class="meta-value">Maio 2026</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Posts total</span>
+        <span class="meta-value">180+</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ NICHO ══════════════════════════════ -->
+<section class="section" id="nicho">
+  <span class="sec-label">01 · Nicho</span>
+  <h2>Seu posicionamento</h2>
+  <p class="sec-desc">Mulher adulta que trabalha de casa, tem estilo visual marcado, ama skincare e acompanha o que está em alta em beleza — com os pets aparecendo naturalmente no meio de tudo isso.</p>
+
+  <div class="nicho-grid">
+    <div class="card">
+      <h3>Por que esse nicho funciona</h3>
+      <ul class="why-list">
+        <li>GRWM de home office cresce mais rápido que GRWM genérico no TikTok BR</li>
+        <li>Skincare está em explosão — qualquer novidade de produto viraliza rápido</li>
+        <li>Conteúdo com pets tem um dos maiores índices de compartilhamento da plataforma</li>
+        <li>"Aesthetic adulta" é sub-representado no Brasil — a maioria é teen ou lifestyle irreal</li>
+        <li>Você não precisa criar personagem — é exatamente a sua vida real</li>
+        <li>Pilar de compras/produtos → caminho natural para monetização</li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom: 16px;">
+        <h3>Tom de voz</h3>
+        <p style="font-size:14px; color:var(--brown-mid); line-height:1.7;">Leve, visual, honesto. Mostra a vida bonita e cuidada — mas não perfeita. Fala sobre o que comprou, o que gostou, o que não valeu o hype. Pessoas seguem por identificação, não por aspiração impossível.</p>
+      </div>
+      <div class="usp-box">
+        <p class="sec-label" style="margin-bottom: 8px;">Proposta de valor</p>
+        <p>"Mostro como é minha rotina real — o skincare, a maquiagem do dia, os looks de quem trabalha em casa, e os animais no meio de tudo isso."</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ══════════════════════════════ PILARES ══════════════════════════════ -->
+<section class="section" id="pilares">
+  <span class="sec-label">02 · Pilares</span>
+  <h2>Os 5 pilares de conteúdo</h2>
+  <p class="sec-desc">Cada pilar é uma fatia do seu perfil. A mistura cria variedade sem perder identidade — quem segue sabe o que esperar, mas nunca fica entediado.</p>
+
+  <div class="pilares-grid">
+    <div class="pilar p1">
+      <span class="pilar-icon">💄</span>
+      <div class="pilar-pct">35%</div>
+      <div class="pilar-name">Skincare + Makeup</div>
+      <div class="pilar-ex">Rotina AM/PM · GRWM · Review de produto em alta · Dupe · Tutorial</div>
+    </div>
+    <div class="pilar p2">
+      <span class="pilar-icon">👗</span>
+      <div class="pilar-pct">25%</div>
+      <div class="pilar-name">Aesthetic + Moda</div>
+      <div class="pilar-ex">Look do dia · Como monto um visual · Aesthetic específico · 1 peça 3 looks</div>
+    </div>
+    <div class="pilar p3">
+      <span class="pilar-icon">⏰</span>
+      <div class="pilar-pct">20%</div>
+      <div class="pilar-name">Rotina</div>
+      <div class="pilar-ex">Morning routine · Dia de HO · Night routine · Dia em SP · Vlog</div>
+    </div>
+    <div class="pilar p4">
+      <span class="pilar-icon">🐾</span>
+      <div class="pilar-pct">10%</div>
+      <div class="pilar-name">Pets</div>
+      <div class="pilar-ex">Vida com os animais · Clips no meio da rotina · Dias de folga</div>
+    </div>
+    <div class="pilar p5">
+      <span class="pilar-icon">🛍️</span>
+      <div class="pilar-pct">10%</div>
+      <div class="pilar-name">Compras + Achados</div>
+      <div class="pilar-ex">Haul beleza · Produto que valeu · Onde compro · Wishlist</div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ══════════════════════════════ ROTINA ══════════════════════════════ -->
+<section class="section" id="rotina">
+  <span class="sec-label">03 · Rotina</span>
+  <h2>Seu dia de criação</h2>
+  <p class="sec-desc">4h+ distribuídas para você gravar enquanto faz a rotina real — sem reservar um bloco enorme que nunca acontece.</p>
+
+  <div class="rotina-grid">
+    <div class="bloco">
+      <div class="bloco-title">Manhã — gravar enquanto faz</div>
+      <div class="timeline">
+        <div class="tl-item pink">
+          <div class="tl-time">07:00</div>
+          <div class="tl-desc">Skincare matinal filmado</div>
+          <div class="tl-sub">Já é conteúdo, filma sem roteiro</div>
+        </div>
+        <div class="tl-item pink">
+          <div class="tl-time">07:30</div>
+          <div class="tl-desc">GRWM — maquiagem do dia</div>
+          <div class="tl-sub">Espelho + ring light, fala enquanto faz</div>
+        </div>
+        <div class="tl-item pink">
+          <div class="tl-time">08:00</div>
+          <div class="tl-desc">Clip do look final + pets acordando</div>
+          <div class="tl-sub">30 segundos max, nada elaborado</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <div class="bloco-title">Edição manhã (90 min)</div>
+      <div class="timeline">
+        <div class="tl-item sage">
+          <div class="tl-time">09:00</div>
+          <div class="tl-desc">Edita o vídeo do dia anterior</div>
+          <div class="tl-sub">CapCut — templates de beleza já prontos</div>
+        </div>
+        <div class="tl-item sage">
+          <div class="tl-time">10:00</div>
+          <div class="tl-desc">Posta TikTok + Reels</div>
+          <div class="tl-sub">Legenda com hook + máx. 6 hashtags</div>
+        </div>
+        <div class="tl-item sage">
+          <div class="tl-time">10:20</div>
+          <div class="tl-desc">Responde comentários + explora nicho</div>
+          <div class="tl-sub">30 min de engajamento ativo</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <div class="bloco-title">Trabalho CLT ↓</div>
+      <div class="timeline">
+        <div class="tl-item gold">
+          <div class="tl-time">19:00</div>
+          <div class="tl-desc">Filma "o que usei hoje" ou review</div>
+          <div class="tl-sub">Produto novo, haul, achado do dia</div>
+        </div>
+        <div class="tl-item gold">
+          <div class="tl-time">19:30</div>
+          <div class="tl-desc">Edita clips soltos do dia</div>
+          <div class="tl-sub">Look, pets, cenas da rotina</div>
+        </div>
+        <div class="tl-item gold">
+          <div class="tl-time">20:30</div>
+          <div class="tl-desc">Posta segundo conteúdo ou Stories</div>
+          <div class="tl-sub">Fase 2+: 2 posts/dia</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloco">
+      <div class="bloco-title">Encerramento</div>
+      <div class="timeline">
+        <div class="tl-item mauve">
+          <div class="tl-time">21:30</div>
+          <div class="tl-desc">Night routine filmada</div>
+          <div class="tl-sub">Skincare PM com luz quente — super aesthetic</div>
+        </div>
+        <div class="tl-item mauve">
+          <div class="tl-time">22:00</div>
+          <div class="tl-desc">Salva 3 trends/referências</div>
+          <div class="tl-sub">TikTok Creative Center + favoritos</div>
+        </div>
+        <div class="tl-item mauve">
+          <div class="tl-time">22:15</div>
+          <div class="tl-desc">Anota o conteúdo de amanhã</div>
+          <div class="tl-sub">30 seg de planejamento é suficiente</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ══════════════════════════════ FASE 1 ══════════════════════════════ -->
+<section class="section" id="fase1">
+  <div class="fase-header">
+    <div class="fase-num">01</div>
+    <div class="fase-info">
+      <h2>Fundação</h2>
+      <p>Dias 1–30 · 1 post/dia · Definir voz, identidade visual e formatos que performam</p>
+    </div>
+    <div class="fase-kpis">
+      <div class="kpi">
+        <div class="kpi-val">200+</div>
+        <div class="kpi-label">seguidores</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">30</div>
+        <div class="kpi-label">posts</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">1</div>
+        <div class="kpi-label">vídeo viral</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="leg"><div class="leg-dot" style="background:#C9909F"></div> GRWM</div>
+    <div class="leg"><div class="leg-dot" style="background:#8FAF9E"></div> Skincare</div>
+    <div class="leg"><div class="leg-dot" style="background:#C4A055"></div> Look / Moda</div>
+    <div class="leg"><div class="leg-dot" style="background:#9E90AF"></div> Review</div>
+    <div class="leg"><div class="leg-dot" style="background:#B88870"></div> Rotina</div>
+    <div class="leg"><div class="leg-dot" style="background:#6BAF88"></div> Pets</div>
+    <div class="leg"><div class="leg-dot" style="background:#D4B560"></div> Haul</div>
+    <div class="leg"><div class="leg-dot" style="background:#9090C8"></div> Trend</div>
+    <div class="leg"><div class="leg-dot" style="background:#C4A055"></div> Marco ⭐</div>
+  </div>
+
+  <div class="cal-grid">
+    <div class="cal-head">Seg</div><div class="cal-head">Ter</div><div class="cal-head">Qua</div>
+    <div class="cal-head">Qui</div><div class="cal-head">Sex</div><div class="cal-head">Sáb</div><div class="cal-head">Dom</div>
+
+    <!-- Semana 1 -->
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 1</div>
+      <span class="cal-icon">📱</span>
+      <div class="cal-text">Apresentação</div>
+      <span class="cal-sub">quem sou + o que vou postar</span>
+    </div>
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 2</div>
+      <span class="cal-icon">🧴</span>
+      <div class="cal-text">Skincare matinal</div>
+      <span class="cal-sub">passo a passo cada produto</span>
+    </div>
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 3</div>
+      <span class="cal-icon">💄</span>
+      <div class="cal-text">GRWM home office</div>
+      <span class="cal-sub">maquiagem de 10 min p/ calls</span>
+    </div>
+    <div class="cal-day look">
+      <div class="cal-num">Dia 4</div>
+      <span class="cal-icon">👗</span>
+      <div class="cal-text">Look aesthetic do dia</div>
+      <span class="cal-sub">como me visto em casa</span>
+    </div>
+    <div class="cal-day review">
+      <div class="cal-num">Dia 5</div>
+      <span class="cal-icon">✨</span>
+      <div class="cal-text">Review protetor solar</div>
+      <span class="cal-sub">o que está viralizando agora</span>
+    </div>
+    <div class="cal-day pets">
+      <div class="cal-num">Dia 6</div>
+      <span class="cal-icon">🐾</span>
+      <div class="cal-text">Dia com os pets</div>
+      <span class="cal-sub">vlog leve, um dia normal</span>
+    </div>
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 7</div>
+      <span class="cal-icon">🌿</span>
+      <div class="cal-text">Prateleira de skincare</div>
+      <span class="cal-sub">o que tem e por quê</span>
+    </div>
+
+    <!-- Semana 2 -->
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 8</div>
+      <span class="cal-icon">🌙</span>
+      <div class="cal-text">Night routine</div>
+      <span class="cal-sub">skincare noturno completo</span>
+    </div>
+    <div class="cal-day review">
+      <div class="cal-num">Dia 9</div>
+      <span class="cal-icon">💛</span>
+      <div class="cal-text">3 produtos essenciais</div>
+      <span class="cal-sub">nunca ficam sem no banheiro</span>
+    </div>
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 10</div>
+      <span class="cal-icon">💄</span>
+      <div class="cal-text">GRWM para sair SP</div>
+      <span class="cal-sub">maquiagem quando tem que sair</span>
+    </div>
+    <div class="cal-day haul">
+      <div class="cal-num">Dia 11</div>
+      <span class="cal-icon">🛍️</span>
+      <div class="cal-text">Haul beleza do mês</div>
+      <span class="cal-sub">o que chegou essa semana</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 12</div>
+      <span class="cal-icon">☀️</span>
+      <div class="cal-text">Morning routine</div>
+      <span class="cal-sub">acordar → pronta p/ trabalhar</span>
+    </div>
+    <div class="cal-day trend">
+      <div class="cal-num">Dia 13</div>
+      <span class="cal-icon">📱</span>
+      <div class="cal-text">POV trend</div>
+      <span class="cal-sub">trabalha em casa + skincare</span>
+    </div>
+    <div class="cal-day look">
+      <div class="cal-num">Dia 14</div>
+      <span class="cal-icon">👗</span>
+      <div class="cal-text">1 peça, 3 looks</div>
+      <span class="cal-sub">como usar o mesmo básico</span>
+    </div>
+
+    <!-- Semana 3 -->
+    <div class="cal-day review">
+      <div class="cal-num">Dia 15</div>
+      <span class="cal-icon">😬</span>
+      <div class="cal-text">Review honesto</div>
+      <span class="cal-sub">produto hype que decepcionou</span>
+    </div>
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 16</div>
+      <span class="cal-icon">🧴</span>
+      <div class="cal-text">Organização skincare</div>
+      <span class="cal-sub">prateleira antes e depois</span>
+    </div>
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 17</div>
+      <span class="cal-icon">💼</span>
+      <div class="cal-text">GRWM + vlog reunião</div>
+      <span class="cal-sub">dia com reunião importante no HO</span>
+    </div>
+    <div class="cal-day look">
+      <div class="cal-num">Dia 18</div>
+      <span class="cal-icon">✨</span>
+      <div class="cal-text">Look aesthetic do zero</div>
+      <span class="cal-sub">processo de montar um visual</span>
+    </div>
+    <div class="cal-day review">
+      <div class="cal-num">Dia 19</div>
+      <span class="cal-icon">💕</span>
+      <div class="cal-text">Testei 5 trends</div>
+      <span class="cal-sub">em qual virei fã de verdade?</span>
+    </div>
+    <div class="cal-day pets">
+      <div class="cal-num">Dia 20</div>
+      <span class="cal-icon">🐾</span>
+      <div class="cal-text">Dia dos pets</div>
+      <span class="cal-sub">alimentação, brincadeira, caos</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 21</div>
+      <span class="cal-icon">📊</span>
+      <div class="cal-text">3 semanas — o que aprendi</div>
+      <span class="cal-sub">criar conteúdo todo dia</span>
+    </div>
+
+    <!-- Semana 4 -->
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 22</div>
+      <span class="cal-icon">⚡</span>
+      <div class="cal-text">GRWM 5 minutos</div>
+      <span class="cal-sub">versão quando atrasou</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 23</div>
+      <span class="cal-icon">🏠</span>
+      <div class="cal-text">Home office tour</div>
+      <span class="cal-sub">meu espaço de trabalho</span>
+    </div>
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 24</div>
+      <span class="cal-icon">🔄</span>
+      <div class="cal-text">Skincare update</div>
+      <span class="cal-sub">o que troquei na rotina</span>
+    </div>
+    <div class="cal-day trend">
+      <div class="cal-num">Dia 25</div>
+      <span class="cal-icon">🎵</span>
+      <div class="cal-text">Trend viral adaptada</div>
+      <span class="cal-sub">áudio em alta no nicho</span>
+    </div>
+    <div class="cal-day haul">
+      <div class="cal-num">Dia 26</div>
+      <span class="cal-icon">🛍️</span>
+      <div class="cal-text">Haul roupas HO</div>
+      <span class="cal-sub">peças para trabalhar em casa</span>
+    </div>
+    <div class="cal-day marco">
+      <div class="cal-num">Dia 27</div>
+      <span class="cal-icon">📈</span>
+      <div class="cal-text">⭐ 1 mês — números reais</div>
+      <span class="cal-sub">aprendizados, o que muda</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 28</div>
+      <span class="cal-icon">❓</span>
+      <div class="cal-text">Q&A skincare</div>
+      <span class="cal-sub">responde dúvidas dos Stories</span>
+    </div>
+  </div>
+
+  <!-- Dias 29-30 separados -->
+  <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; margin-top:6px;">
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 29</div>
+      <span class="cal-icon">🌙</span>
+      <div class="cal-text">Night routine estética</div>
+      <span class="cal-sub">filmada com luz quente</span>
+    </div>
+    <div class="cal-day marco">
+      <div class="cal-num">Dia 30</div>
+      <span class="cal-icon">🎉</span>
+      <div class="cal-text">⭐ Marco 30 dias!</div>
+      <span class="cal-sub">celebração + próximos 30</span>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ══════════════════════════════ FASE 2 ══════════════════════════════ -->
+<section class="section" id="fase2">
+  <div class="fase-header">
+    <div class="fase-num">02</div>
+    <div class="fase-info">
+      <h2>Aceleração</h2>
+      <p>Dias 31–60 · 2 posts/dia · Analisar o que performa, dobrar nas trends, lançar série semanal</p>
+    </div>
+    <div class="fase-kpis">
+      <div class="kpi">
+        <div class="kpi-val">1k+</div>
+        <div class="kpi-label">seguidores</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">60</div>
+        <div class="kpi-label">posts</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">10k</div>
+        <div class="kpi-label">views/vídeo</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cal-grid">
+    <div class="cal-head">Seg</div><div class="cal-head">Ter</div><div class="cal-head">Qua</div>
+    <div class="cal-head">Qui</div><div class="cal-head">Sex</div><div class="cal-head">Sáb</div><div class="cal-head">Dom</div>
+
+    <!-- Semana 5 -->
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 31</div>
+      <span class="cal-icon">💄</span>
+      <div class="cal-text">GRWM dia → noite</div>
+      <span class="cal-sub">como evolui a makeup</span>
+    </div>
+    <div class="cal-day review">
+      <div class="cal-num">Dia 32</div>
+      <span class="cal-icon">✨</span>
+      <div class="cal-text">Review: produto da semana</div>
+      <span class="cal-sub">o que está em alta agora</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 33</div>
+      <span class="cal-icon">☕</span>
+      <div class="cal-text">Morning + café</div>
+      <span class="cal-sub">ritual do início do dia aesthetic</span>
+    </div>
+    <div class="cal-day trend">
+      <div class="cal-num">Dia 34</div>
+      <span class="cal-icon">📱</span>
+      <div class="cal-text">Day in my life HO</div>
+      <span class="cal-sub">formato trend, dia de trabalho</span>
+    </div>
+    <div class="cal-day haul">
+      <div class="cal-num">Dia 35</div>
+      <span class="cal-icon">📦</span>
+      <div class="cal-text">Unboxing da semana</div>
+      <span class="cal-sub">o que chegou em casa</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 36</div>
+      <span class="cal-icon">🌆</span>
+      <div class="cal-text">Day out SP</div>
+      <span class="cal-sub">vlog do dia fora de casa</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 37</div>
+      <span class="cal-icon">📋</span>
+      <div class="cal-text">Recap semana 5</div>
+      <span class="cal-sub">pergunta-resposta com seguidores</span>
+    </div>
+
+    <!-- Semana 6 — formatos virais -->
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 38</div>
+      <span class="cal-icon">🧴</span>
+      <div class="cal-text">"Tenho 20, uso 7"</div>
+      <span class="cal-sub">curiosidade sobre a prateleira</span>
+    </div>
+    <div class="cal-day review">
+      <div class="cal-num">Dia 39</div>
+      <span class="cal-icon">💰</span>
+      <div class="cal-text">Dupe produto famoso</div>
+      <span class="cal-sub">alternativa por metade do preço</span>
+    </div>
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 40</div>
+      <span class="cal-icon">⚡</span>
+      <div class="cal-text">Pijama ao look: 8 min</div>
+      <span class="cal-sub">time-lapse, corte rápido</span>
+    </div>
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 41</div>
+      <span class="cal-icon">🔍</span>
+      <div class="cal-text">Antes e depois skincare</div>
+      <span class="cal-sub">sem makeup vs com skincare</span>
+    </div>
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 42</div>
+      <span class="cal-icon">📚</span>
+      <div class="cal-text">2 meses de skincare</div>
+      <span class="cal-sub">o que aprendi e o que mudou</span>
+    </div>
+    <div class="cal-day review">
+      <div class="cal-num">Dia 43</div>
+      <span class="cal-icon">🙅</span>
+      <div class="cal-text">3 erros de makeup</div>
+      <span class="cal-sub">que cometia sem saber</span>
+    </div>
+    <div class="cal-day look">
+      <div class="cal-num">Dia 44</div>
+      <span class="cal-icon">👗</span>
+      <div class="cal-text">Look aesthetic específico</div>
+      <span class="cal-sub">ex: clean girl ou dark</span>
+    </div>
+
+    <!-- Semana 7 — série semanal -->
+    <div class="cal-day review">
+      <div class="cal-num">Dia 45</div>
+      <span class="cal-icon">💎</span>
+      <div class="cal-text">Review premium</div>
+      <span class="cal-sub">produto caro — vale ou não?</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 46</div>
+      <span class="cal-icon">📅</span>
+      <div class="cal-text">Organização da semana HO</div>
+      <span class="cal-sub">produtividade + lifestyle</span>
+    </div>
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 47</div>
+      <span class="cal-icon">🎉</span>
+      <div class="cal-text">GRWM festa/evento</div>
+      <span class="cal-sub">maquiagem mais elaborada</span>
+    </div>
+    <div class="cal-day pets">
+      <div class="cal-num">Dia 48</div>
+      <span class="cal-icon">🐾</span>
+      <div class="cal-text">Dia de folga + pets</div>
+      <span class="cal-sub">domingo vibe, sem trabalho</span>
+    </div>
+    <div class="cal-day trend">
+      <div class="cal-num">Dia 49</div>
+      <span class="cal-icon">🎵</span>
+      <div class="cal-text">5 áudios que estou salvando</div>
+      <span class="cal-sub">trend guide da semana</span>
+    </div>
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 50</div>
+      <span class="cal-icon">🌿</span>
+      <div class="cal-text">Skincare ritual domingo</div>
+      <span class="cal-sub">slow morning, feito com calma</span>
+    </div>
+    <div class="cal-day haul">
+      <div class="cal-num">Dia 51</div>
+      <span class="cal-icon">📦</span>
+      <div class="cal-text">Haul importado/Shopee</div>
+      <span class="cal-sub">o que chegou de pedido</span>
+    </div>
+
+    <!-- Semana 8 — análise -->
+    <div class="cal-day review">
+      <div class="cal-num">Dia 52</div>
+      <span class="cal-icon">🤔</span>
+      <div class="cal-text">Produtos overrated</div>
+      <span class="cal-sub">o que não vale o hype</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 53</div>
+      <span class="cal-icon">😴</span>
+      <div class="cal-text">Morning routine: dias ruins</div>
+      <span class="cal-sub">a versão real sem filtro</span>
+    </div>
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 54</div>
+      <span class="cal-icon">🎨</span>
+      <div class="cal-text">Tutorial makeup</div>
+      <span class="cal-sub">foco em um detalhe: olho/boca</span>
+    </div>
+    <div class="cal-day trend">
+      <div class="cal-num">Dia 55</div>
+      <span class="cal-icon">🔥</span>
+      <div class="cal-text">Trend viral da semana</div>
+      <span class="cal-sub">áudio mais viral do momento</span>
+    </div>
+    <div class="cal-day pets">
+      <div class="cal-num">Dia 56</div>
+      <span class="cal-icon">🐾</span>
+      <div class="cal-text">Vida com X animais</div>
+      <span class="cal-sub">como é ter pets em HO</span>
+    </div>
+    <div class="cal-day marco">
+      <div class="cal-num">Dia 57</div>
+      <span class="cal-icon">🎙️</span>
+      <div class="cal-text">⭐ Primeira live!</div>
+      <span class="cal-sub">Q&A ao vivo no TikTok</span>
+    </div>
+    <div class="cal-day trend">
+      <div class="cal-num">Dia 58</div>
+      <span class="cal-icon">🤝</span>
+      <div class="cal-text">Collab: stitch criadora</div>
+      <span class="cal-sub">dueto com conta do nicho</span>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; margin-top:6px;">
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 59</div>
+      <span class="cal-icon">📋</span>
+      <div class="cal-text">Carrossel: rotina AM+PM</div>
+      <span class="cal-sub">cards detalhados no IG</span>
+    </div>
+    <div class="cal-day marco">
+      <div class="cal-num">Dia 60</div>
+      <span class="cal-icon">🏆</span>
+      <div class="cal-text">⭐ Marco 60 dias!</div>
+      <span class="cal-sub">números + evolução de pele</span>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ══════════════════════════════ FASE 3 ══════════════════════════════ -->
+<section class="section" id="fase3">
+  <div class="fase-header">
+    <div class="fase-num">03</div>
+    <div class="fase-info">
+      <h2>Otimização</h2>
+      <p>Dias 61–90 · 3 posts/dia · Volume máximo, série semanal, preparar monetização</p>
+    </div>
+    <div class="fase-kpis">
+      <div class="kpi">
+        <div class="kpi-val">5k+</div>
+        <div class="kpi-label">seguidores</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">180+</div>
+        <div class="kpi-label">posts total</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">50k</div>
+        <div class="kpi-label">views/vídeo</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cal-grid">
+    <div class="cal-head">Seg</div><div class="cal-head">Ter</div><div class="cal-head">Qua</div>
+    <div class="cal-head">Qui</div><div class="cal-head">Sex</div><div class="cal-head">Sáb</div><div class="cal-head">Dom</div>
+
+    <!-- Semana 9 -->
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 61</div>
+      <span class="cal-icon">☀️</span>
+      <div class="cal-text">GRWM manhã</div>
+      <span class="cal-sub">+ night routine noite</span>
+    </div>
+    <div class="cal-day review">
+      <div class="cal-num">Dia 62</div>
+      <span class="cal-icon">💄</span>
+      <div class="cal-text">Dica de makeup rápida</div>
+      <span class="cal-sub">60 segundos, objetivo</span>
+    </div>
+    <div class="cal-day trend">
+      <div class="cal-num">Dia 63</div>
+      <span class="cal-icon">📱</span>
+      <div class="cal-text">POV trend do momento</div>
+      <span class="cal-sub">+ clip do look do dia</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 64</div>
+      <span class="cal-icon">☕</span>
+      <div class="cal-text">Morning ritual aesthetic</div>
+      <span class="cal-sub">café + skincare + look</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 65</div>
+      <span class="cal-icon">💼</span>
+      <div class="cal-text">Dia intenso de trabalho</div>
+      <span class="cal-sub">HO pra valer + trend noite</span>
+    </div>
+    <div class="cal-day haul">
+      <div class="cal-num">Dia 66</div>
+      <span class="cal-icon">🛒</span>
+      <div class="cal-text">Compras da semana</div>
+      <span class="cal-sub">+ look fim de semana</span>
+    </div>
+    <div class="cal-day trend">
+      <div class="cal-num">Dia 67</div>
+      <span class="cal-icon">🤝</span>
+      <div class="cal-text">Collab planejada</div>
+      <span class="cal-sub">vídeo com criadora</span>
+    </div>
+
+    <!-- Semana 10 — série "Semana com a Isa" -->
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 68</div>
+      <span class="cal-icon">📺</span>
+      <div class="cal-text">Série 1/7: visão geral</div>
+      <span class="cal-sub">rotina da semana completa</span>
+    </div>
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 69</div>
+      <span class="cal-icon">🧴</span>
+      <div class="cal-text">Série 2/7: skincare AM</div>
+      <span class="cal-sub">detalhado, cada camada</span>
+    </div>
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 70</div>
+      <span class="cal-icon">💄</span>
+      <div class="cal-text">Série 3/7: GRWM</div>
+      <span class="cal-sub">do zero ao look completo</span>
+    </div>
+    <div class="cal-day look">
+      <div class="cal-num">Dia 71</div>
+      <span class="cal-icon">👗</span>
+      <div class="cal-text">Série 4/7: look aesthetic</div>
+      <span class="cal-sub">montar do guarda-roupa</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 72</div>
+      <span class="cal-icon">🌇</span>
+      <div class="cal-text">Série 5/7: tarde + noite</div>
+      <span class="cal-sub">trabalho + relaxamento</span>
+    </div>
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 73</div>
+      <span class="cal-icon">🌿</span>
+      <div class="cal-text">Série 6/7: skincare PM</div>
+      <span class="cal-sub">ritual noturno detalhado</span>
+    </div>
+    <div class="cal-day rotina">
+      <div class="cal-num">Dia 74</div>
+      <span class="cal-icon">🌸</span>
+      <div class="cal-text">Série 7/7: ritual domingo</div>
+      <span class="cal-sub">slow morning + planejamento</span>
+    </div>
+
+    <!-- Semana 11 — monetização -->
+    <div class="cal-day review">
+      <div class="cal-num">Dia 75</div>
+      <span class="cal-icon">💸</span>
+      <div class="cal-text">Quanto gasto com skincare</div>
+      <span class="cal-sub">transparência = engajamento</span>
+    </div>
+    <div class="cal-day review">
+      <div class="cal-num">Dia 76</div>
+      <span class="cal-icon">💎</span>
+      <div class="cal-text">Premium — vale o preço?</div>
+      <span class="cal-sub">review honesto e detalhado</span>
+    </div>
+    <div class="cal-day haul">
+      <div class="cal-num">Dia 77</div>
+      <span class="cal-icon">🛒</span>
+      <div class="cal-text">Onde compro produtos</div>
+      <span class="cal-sub">farmácia, Shopee, importado</span>
+    </div>
+    <div class="cal-day haul">
+      <div class="cal-num">Dia 78</div>
+      <span class="cal-icon">📋</span>
+      <div class="cal-text">Wishlist de beleza</div>
+      <span class="cal-sub">próximas compras planejadas</span>
+    </div>
+    <div class="cal-day review">
+      <div class="cal-num">Dia 79</div>
+      <span class="cal-icon">💰</span>
+      <div class="cal-text">R$200 em skincare</div>
+      <span class="cal-sub">como gastar bem</span>
+    </div>
+    <div class="cal-day review">
+      <div class="cal-num">Dia 80</div>
+      <span class="cal-icon">❌</span>
+      <div class="cal-text">Produto que não valeu</div>
+      <span class="cal-sub">review honesto sem filtro</span>
+    </div>
+    <div class="cal-day trend">
+      <div class="cal-num">Dia 81</div>
+      <span class="cal-icon">🤝</span>
+      <div class="cal-text">Como seria uma parceria</div>
+      <span class="cal-sub">educa audiência + posiciona</span>
+    </div>
+
+    <!-- Semana 12 — celebração -->
+    <div class="cal-day marco">
+      <div class="cal-num">Dia 82</div>
+      <span class="cal-icon">📖</span>
+      <div class="cal-text">⭐ 90 dias — o que mudou</div>
+      <span class="cal-sub">vida, rotina, seguidores</span>
+    </div>
+    <div class="cal-day skincare">
+      <div class="cal-num">Dia 83</div>
+      <span class="cal-icon">✨</span>
+      <div class="cal-text">Evolução da pele</div>
+      <span class="cal-sub">dia 1 vs hoje (side by side)</span>
+    </div>
+    <div class="cal-day marco">
+      <div class="cal-num">Dia 84</div>
+      <span class="cal-icon">🎬</span>
+      <div class="cal-text">Compilação melhores clips</div>
+      <span class="cal-sub">nostalgia dos 90 dias</span>
+    </div>
+    <div class="cal-day marco">
+      <div class="cal-num">Dia 85</div>
+      <span class="cal-icon">🎙️</span>
+      <div class="cal-text">⭐ Live especial</div>
+      <span class="cal-sub">celebração 90 dias ao vivo</span>
+    </div>
+    <div class="cal-day marco">
+      <div class="cal-num">Dia 86</div>
+      <span class="cal-icon">🚀</span>
+      <div class="cal-text">Próximos 90 dias</div>
+      <span class="cal-sub">engaja no que vem</span>
+    </div>
+    <div class="cal-day pets">
+      <div class="cal-num">Dia 87</div>
+      <span class="cal-icon">🐾</span>
+      <div class="cal-text">Pet content especial</div>
+      <span class="cal-sub">leve, divertido, engajador</span>
+    </div>
+    <div class="cal-day grwm">
+      <div class="cal-num">Dia 88</div>
+      <span class="cal-icon">💄</span>
+      <div class="cal-text">GRWM especial caprichado</div>
+      <span class="cal-sub">o look mais elaborado até agora</span>
+    </div>
+  </div>
+
+  <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; margin-top:6px;">
+    <div class="cal-day trend">
+      <div class="cal-num">Dia 89</div>
+      <span class="cal-icon">🤝</span>
+      <div class="cal-text">Collab grande</div>
+      <span class="cal-sub">criadora maior do nicho</span>
+    </div>
+    <div class="cal-day marco">
+      <div class="cal-num">Dia 90</div>
+      <span class="cal-icon">🏆</span>
+      <div class="cal-text">⭐ MARCO 90 DIAS!</div>
+      <span class="cal-sub">transformação épica</span>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ══════════════════════════════ HOOKS ══════════════════════════════ -->
+<section class="section" id="hooks">
+  <span class="sec-label">05 · Hooks &amp; Formatos</span>
+  <h2>Os primeiros 3 segundos decidem tudo</h2>
+  <p class="sec-desc">O hook para o scroll. Sem ele, não adianta o vídeo ser bom. Use um desses padrões comprovados, sempre adaptado ao seu nicho.</p>
+
+  <div class="hooks-grid">
+    <div class="hook">
+      <div class="hook-pattern">Número + promessa</div>
+      <div class="hook-example">"3 produtos de skincare que mudaram minha pele em 30 dias" · "5 erros de maquiagem que todo mundo comete"</div>
+    </div>
+    <div class="hook">
+      <div class="hook-pattern">Controvérsia + resultado</div>
+      <div class="hook-example">"Parei de usar tônico e minha pele melhorou" · "Larguei o protetor solar caro e não me arrependo"</div>
+    </div>
+    <div class="hook">
+      <div class="hook-pattern">Dupe / comparativo</div>
+      <div class="hook-example">"R$ 35 vs R$ 350 — qual realmente funciona?" · "Dupe perfeito do [produto famoso] por metade do preço"</div>
+    </div>
+    <div class="hook">
+      <div class="hook-pattern">POV imersivo</div>
+      <div class="hook-example">"POV: você trabalha de casa mas se maquia todo dia" · "POV: sua rotina de skincare tem 12 passos"</div>
+    </div>
+    <div class="hook">
+      <div class="hook-pattern">"Ninguém fala que..."</div>
+      <div class="hook-example">"Ninguém fala que esse produto da farmácia faz o mesmo que o importado" · "Ninguém conta que skincare fica mais difícil no outono"</div>
+    </div>
+    <div class="hook">
+      <div class="hook-pattern">Exclusividade / revelação</div>
+      <div class="hook-example">"Esse produto não faz propaganda mas devia" · "Testei antes de viralizar — confirmo: vale"</div>
+    </div>
+    <div class="hook">
+      <div class="hook-pattern">Transformação rápida</div>
+      <div class="hook-example">"Do pijama ao look em 8 minutos" · "Pele cansada → glow em 4 passos"</div>
+    </div>
+    <div class="hook">
+      <div class="hook-pattern">Pergunta que gera debate</div>
+      <div class="hook-example">"Você ainda aplica protetor solar do jeito errado?" · "Sua base está oxidando por isso"</div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ══════════════════════════════ INSPIRAÇÕES ══════════════════════════════ -->
+<section class="section" id="inspiracoes">
+  <span class="sec-label">06 · Referências &amp; Inspirações</span>
+  <h2>De onde tirar ideias</h2>
+  <p class="sec-desc">Clica nos cards para ver inspirações visuais e referências de conteúdo. Salva os boards do Pinterest e cria sua própria pasta de referências.</p>
+
+  <div class="inspo-grid">
+    <a class="inspo-card" href="https://www.pinterest.com/search/pins/?q=grwm+aesthetic+makeup+tiktok" target="_blank">
+      <div class="inspo-thumb t1">💄</div>
+      <div class="inspo-body">
+        <div class="inspo-label">Pinterest · Formato</div>
+        <div class="inspo-title">GRWM Aesthetic</div>
+        <div class="inspo-desc">Referências visuais de GRWM com estética limpa, luz quente e setup de espelho. Use para se inspirar no ângulo e na edição.</div>
+        <span class="inspo-link">Ver no Pinterest</span>
+      </div>
+    </a>
+
+    <a class="inspo-card" href="https://www.pinterest.com/search/pins/?q=skincare+flatlay+aesthetic+routine" target="_blank">
+      <div class="inspo-thumb t2">🧴</div>
+      <div class="inspo-body">
+        <div class="inspo-label">Pinterest · Visual</div>
+        <div class="inspo-title">Skincare Flatlay</div>
+        <div class="inspo-desc">Como fotografar e filmar produtos de skincare de forma aesthetic para Reviews, Hauls e posts de carrossel no IG.</div>
+        <span class="inspo-link">Ver no Pinterest</span>
+      </div>
+    </a>
+
+    <a class="inspo-card" href="https://www.pinterest.com/search/pins/?q=that+girl+morning+routine+aesthetic" target="_blank">
+      <div class="inspo-thumb t3">☀️</div>
+      <div class="inspo-body">
+        <div class="inspo-label">Pinterest · Rotina</div>
+        <div class="inspo-title">That Girl Morning Routine</div>
+        <div class="inspo-desc">Referências de morning routine aesthetic — luz, composição, ritmo de corte. Inspire o visual sem copiar o conteúdo.</div>
+        <span class="inspo-link">Ver no Pinterest</span>
+      </div>
+    </a>
+
+    <a class="inspo-card" href="https://www.pinterest.com/search/pins/?q=clean+girl+aesthetic+makeup+look" target="_blank">
+      <div class="inspo-thumb t4">✨</div>
+      <div class="inspo-body">
+        <div class="inspo-label">Pinterest · Aesthetic</div>
+        <div class="inspo-title">Clean Girl Makeup</div>
+        <div class="inspo-desc">Referências do aesthetic "clean girl" — pele, sobrancelha, boca. Ideal para sua identidade visual e looks do dia.</div>
+        <span class="inspo-link">Ver no Pinterest</span>
+      </div>
+    </a>
+
+    <a class="inspo-card" href="https://www.pinterest.com/search/pins/?q=home+office+aesthetic+girl+setup" target="_blank">
+      <div class="inspo-thumb t5">🏠</div>
+      <div class="inspo-body">
+        <div class="inspo-label">Pinterest · Setup</div>
+        <div class="inspo-title">Home Office Aesthetic</div>
+        <div class="inspo-desc">Inspirações de setup para gravação em home office — fundo, luz, decoração. Como fazer o espaço da casa parecer um cenário bonito.</div>
+        <span class="inspo-link">Ver no Pinterest</span>
+      </div>
+    </a>
+
+    <a class="inspo-card" href="https://www.pinterest.com/search/pins/?q=aesthetic+lifestyle+tiktok+girl+vlog" target="_blank">
+      <div class="inspo-thumb t6">🎬</div>
+      <div class="inspo-body">
+        <div class="inspo-label">Pinterest · Vlog</div>
+        <div class="inspo-title">Lifestyle Aesthetic Vlog</div>
+        <div class="inspo-desc">Estilo de filmagem de vlog aesthetic — enquadramento, cores, ritmo. Referência para Day in my life e rotinas filmadas.</div>
+        <span class="inspo-link">Ver no Pinterest</span>
+      </div>
+    </a>
+  </div>
+
+  <div style="margin-top: 32px; background: var(--white); border: 1px solid var(--border); border-radius: 20px; padding: 28px 32px;">
+    <h3 style="margin-bottom: 20px;">Criadoras para acompanhar</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+      <div>
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brown-light); margin-bottom: 8px;">Brasil · Skincare</div>
+        <div style="font-size: 13px; color: var(--brown-mid); line-height: 2;">@niina_secrets<br>@thaisaviola<br>@camilacoelho<br>@luanasjunqueira</div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brown-light); margin-bottom: 8px;">Brasil · Lifestyle HO</div>
+        <div style="font-size: 13px; color: var(--brown-mid); line-height: 2;">@thaissafaion<br>@jadebarbosa<br>@blogueirinhas<br>@vivi_beltrao</div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brown-light); margin-bottom: 8px;">Internacional · Referência</div>
+        <div style="font-size: 13px; color: var(--brown-mid); line-height: 2;">@hyram (skincare ed.)<br>@glamzilla (reviews)<br>@kasiaekiert (aesthetic)<br>@bestdressed (moda)</div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brown-light); margin-bottom: 8px;">Hashtags para usar</div>
+        <div style="font-size: 13px; color: var(--brown-mid); line-height: 2;">#skinacarebrasil<br>#grwmbrasil<br>#homeofficegirl<br>#lookdodia</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ══════════════════════════════ FERRAMENTAS ══════════════════════════════ -->
+<section class="section" id="ferramentas">
+  <span class="sec-label">07 · Ferramentas</span>
+  <h2>Stack completo</h2>
+  <p class="sec-desc">O que você precisa para criar, editar e publicar. Fase 1 é 100% gratuito.</p>
+
+  <div class="tools-grid">
+    <div class="tool">
+      <div class="tool-icon">🎬</div>
+      <div>
+        <div class="tool-name">CapCut</div>
+        <div class="tool-desc">Edição principal de vídeo. Use os templates de "beauty routine" e "aesthetic vlog" que já vêm com corte automático e música.</div>
+        <span class="badge badge-free">Gratuito</span>
+      </div>
+    </div>
+    <div class="tool">
+      <div class="tool-icon">🎨</div>
+      <div>
+        <div class="tool-name">Canva</div>
+        <div class="tool-desc">Capas de carrossel, identidade visual, Stories. Cria um kit com sua paleta de cores e fonte para usar em tudo.</div>
+        <span class="badge badge-free">Gratuito</span>
+      </div>
+    </div>
+    <div class="tool">
+      <div class="tool-icon">📊</div>
+      <div>
+        <div class="tool-name">TikTok Creative Center</div>
+        <div class="tool-desc">Pesquisa de trends, hashtags em alta e áudios subindo no Brasil. Acessa em ads.tiktok.com/business/creativecenter — use toda sexta.</div>
+        <span class="badge badge-free">Gratuito</span>
+      </div>
+    </div>
+    <div class="tool">
+      <div class="tool-icon">📝</div>
+      <div>
+        <div class="tool-name">Notion</div>
+        <div class="tool-desc">Banco de ideias, planejamento semanal e controle do calendário de posts. Cria uma tabela com status (ideia / gravado / editado / postado).</div>
+        <span class="badge badge-free">Gratuito</span>
+      </div>
+    </div>
+    <div class="tool">
+      <div class="tool-icon">✨</div>
+      <div>
+        <div class="tool-name">Unfold / Mojo</div>
+        <div class="tool-desc">Templates aesthetic para Stories do Instagram. Mantém a identidade visual mesmo nos Stories rápidos do dia a dia.</div>
+        <span class="badge badge-free">Gratuito</span>
+      </div>
+    </div>
+    <div class="tool">
+      <div class="tool-icon">💡</div>
+      <div>
+        <div class="tool-name">Ring Light de mesa</div>
+        <div class="tool-desc">Indispensável para GRWM e skincare. Faz toda a diferença na qualidade visual. Fase 2: R$ 80–150 no Shopee ou Mercado Livre.</div>
+        <span class="badge badge-paid">Fase 2 · R$80–150</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ══════════════════════════════ MÉTRICAS ══════════════════════════════ -->
+<section class="section" id="metricas">
+  <span class="sec-label">08 · Métricas</span>
+  <h2>O que acompanhar</h2>
+  <p class="sec-desc">Analisa toda sexta-feira. Não compare seguidores com outras contas — compare você de ontem com você de hoje.</p>
+
+  <table class="metrics-table">
+    <thead>
+      <tr>
+        <th>Métrica</th>
+        <th>Onde ver</th>
+        <th>Meta 30 dias</th>
+        <th>Meta 60 dias</th>
+        <th>Meta 90 dias</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Seguidores TikTok</strong></td>
+        <td style="color:var(--brown-mid)">Analytics → Seguidores</td>
+        <td><span class="m-val m-v1">200+</span></td>
+        <td><span class="m-val m-v2">1.000+</span></td>
+        <td><span class="m-val m-v3">5.000+</span></td>
+      </tr>
+      <tr>
+        <td><strong>Seguidores Instagram</strong></td>
+        <td style="color:var(--brown-mid)">Professional Dashboard</td>
+        <td><span class="m-val m-v1">100+</span></td>
+        <td><span class="m-val m-v2">500+</span></td>
+        <td><span class="m-val m-v3">1.500+</span></td>
+      </tr>
+      <tr>
+        <td><strong>Views médias/vídeo</strong></td>
+        <td style="color:var(--brown-mid)">Analytics → Conteúdo</td>
+        <td><span class="m-val m-v1">500</span></td>
+        <td><span class="m-val m-v2">2.500</span></td>
+        <td><span class="m-val m-v3">10.000</span></td>
+      </tr>
+      <tr>
+        <td><strong>Taxa de conclusão</strong></td>
+        <td style="color:var(--brown-mid)">TikTok Analytics</td>
+        <td><span class="m-val m-v1">40%+</span></td>
+        <td><span class="m-val m-v2">50%+</span></td>
+        <td><span class="m-val m-v3">60%+</span></td>
+      </tr>
+      <tr>
+        <td><strong>Salvamentos IG / post</strong></td>
+        <td style="color:var(--brown-mid)">Insights de cada post</td>
+        <td><span class="m-val m-v1">10+</span></td>
+        <td><span class="m-val m-v2">50+</span></td>
+        <td><span class="m-val m-v3">200+</span></td>
+      </tr>
+      <tr>
+        <td><strong>Comentários / post</strong></td>
+        <td style="color:var(--brown-mid)">Manual</td>
+        <td><span class="m-val m-v1">5+</span></td>
+        <td><span class="m-val m-v2">20+</span></td>
+        <td><span class="m-val m-v3">50+</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div class="card">
+      <h3 style="font-size:16px; margin-bottom:12px;">Regras de ouro</h3>
+      <ul class="why-list">
+        <li>Posta mesmo sem vontade — consistência bate perfeição sempre</li>
+        <li>Responde todos os comentários nos primeiros 30 dias</li>
+        <li>Nunca deleta vídeo — o TikTok distribui quando quer</li>
+        <li>Salva áudios enquanto estão subindo, não depois de saturar</li>
+        <li>Honestidade sobre o que não gostou gera mais confiança que só elogiar</li>
+        <li>Stories todos os dias, mesmo que não poste vídeo</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="font-size:16px; margin-bottom:12px;">Checklist diário</h3>
+      <ul class="why-list">
+        <li>Filmou pelo menos 5 clips do dia</li>
+        <li>Postou no TikTok</li>
+        <li>Postou nos Stories</li>
+        <li>Respondeu comentários (mín. 15 min)</li>
+        <li>Salvou 2 trends/referências nos favoritos</li>
+        <li>Anotou o conteúdo de amanhã</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p style="font-family:'Playfair Display',serif; font-size:20px; color:var(--brown); margin-bottom:8px; font-style:italic;">That Home Office Girl</p>
+  <p>Planejamento de conteúdo · 90 dias · TikTok + Instagram</p>
+  <p style="margin-top:4px;">Criado em 23/05/2026 · Revisar a cada 30 dias</p>
+</footer>
+
+</body>
+</html>
