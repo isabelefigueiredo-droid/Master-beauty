@@ -2,7 +2,7 @@ name: Deploy FitLife
 
 on:
   push:
-    branches: [main, claude/fitness-workout-diet-app-6qiMW]
+    branches: [main, claude/fitness-workout-diet-app-6qiMW, claude/personal-life-dashboard-uNU3l]
 
 permissions:
   contents: read
