@@ -4,6 +4,7 @@ import { VitePWA } from "vite-plugin-pwa";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
 export default defineConfig({
+  base: "/Master-beauty/",
   plugins: [
     react(),
     viteSingleFile(),

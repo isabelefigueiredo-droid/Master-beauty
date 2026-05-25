@@ -5,11 +5,20 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -23,10 +32,11 @@ jobs:
         working-directory: master-beauty/master-beauty
         run: npm ci && npm run build
 
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: master-beauty/master-beauty/dist
-          force_orphan: true
-          enable_jekyll: false
+          path: master-beauty/master-beauty/dist
+
+      - uses: actions/deploy-pages@v4
+        id: deployment
