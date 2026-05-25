@@ -71,20 +71,20 @@ const Notif = {
     const pending = habits.filter(h => !logs.includes(h.id));
     const hour = new Date().getHours();
     if (hour >= 19 && pending.length > 0)
-      Notif.send("My Orbit ✦", `${pending.length} hábito${pending.length > 1 ? "s" : ""} pendente${pending.length > 1 ? "s" : ""} hoje.`);
+      Notif.send("A Vida Toda ✦", `${pending.length} hábito${pending.length > 1 ? "s" : ""} pendente${pending.length > 1 ? "s" : ""} hoje.`);
 
     const bills = db.get("orbit_bills", []);
     const dayN = new Date().getDate();
     const dueSoon = bills.filter(b => !b.paid && [dayN, dayN + 1, dayN + 2].includes(b.dueDay));
     if (dueSoon.length > 0)
-      Notif.send("Conta a pagar — My Orbit", `${dueSoon[0].name} vence em breve!`);
+      Notif.send("Conta a pagar — A Vida Toda", `${dueSoon[0].name} vence em breve!`);
 
     const reminders = db.get("orbit_notes", []);
     const now = new Date();
     let changed = false;
     const updated = reminders.map(r => {
       if (r.reminder && !r.notified && new Date(r.reminder) <= now) {
-        Notif.send("📝 Lembrete — My Orbit", r.title);
+        Notif.send("📝 Lembrete — A Vida Toda", r.title);
         changed = true;
         return { ...r, notified: true };
       }
@@ -163,7 +163,7 @@ function TabHeader({ tab, subtitle, children }) {
           backgroundColor: tab.color,
           backgroundImage: `repeating-linear-gradient(-45deg,transparent,transparent 14px,rgba(255,255,255,0.1) 14px,rgba(255,255,255,0.1) 28px)`,
         }}>
-        <p className="text-white/50 text-xs font-bold uppercase tracking-widest mb-1">My Orbit</p>
+        <p className="text-white/50 text-xs font-bold uppercase tracking-widest mb-1">A Vida Toda</p>
         <h1 className="font-display text-white leading-none" style={{ fontSize: "clamp(30px,9vw,40px)" }}>
           {tab.label} em Ordem
         </h1>
@@ -1505,9 +1505,9 @@ function HomeTab({ setActiveTab }) {
             ⚙️
           </button>
         </div>
-        <p className="text-white/50 text-xs font-bold uppercase tracking-widest mb-1">My Orbit</p>
+        <p className="text-white/50 text-xs font-bold uppercase tracking-widest mb-1">A Vida Toda</p>
         <h1 className="font-display text-white leading-none" style={{ fontSize: "clamp(36px,11vw,52px)" }}>
-          Tudo em Ordem
+          A Vida Toda
         </h1>
         <p className="text-white/65 text-xs mt-2 font-medium capitalize">
           {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
@@ -1589,7 +1589,7 @@ function HomeTab({ setActiveTab }) {
             )}
           </div>
           <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200">
-            <p className="font-semibold text-sm">✦ My Orbit</p>
+            <p className="font-semibold text-sm">✦ A Vida Toda</p>
             <p className="text-xs text-gray-400 mt-1">Seu dashboard pessoal. Dados salvos localmente neste dispositivo.</p>
           </div>
         </div>

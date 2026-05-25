@@ -10,11 +10,11 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "My Orbit",
-        short_name: "My Orbit",
-        description: "Seu dashboard de vida pessoal",
-        theme_color: "#E63946",
-        background_color: "#FFF8F0",
+        name: "A Vida Toda",
+        short_name: "A Vida Toda",
+        description: "Tudo da sua vida na palma da mão",
+        theme_color: "#C1121F",
+        background_color: "#FFF9F5",
         display: "standalone",
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
