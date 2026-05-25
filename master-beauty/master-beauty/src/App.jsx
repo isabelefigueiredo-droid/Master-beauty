@@ -1,1459 +1,1176 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 const db = {
   get: (k, d = null) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
 };
-const todayStr = () => new Date().toISOString().split("T")[0];
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
-const ytEmbed = (q) => `https://www.youtube.com/embed?listType=search&list=${encodeURIComponent(q + " como fazer academia")}`;
+const today = () => new Date().toISOString().split("T")[0];
+const fmtDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR") : "";
+const fmtMoney = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-/* ─── Semana iniciando na segunda-feira ─── */
-function getWeekDays(historico) {
-  const today = new Date();
-  const dow = today.getDay();
-  const daysFromMon = dow === 0 ? 6 : dow - 1;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - daysFromMon);
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const ds = d.toISOString().split("T")[0];
-    return { ds, feito: historico.some(h => h.data === ds), dia: ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"][i] };
-  });
-}
-
-/* ─── Treinos ABCDE ─── */
-const TREINOS = {
-  A: {
-    letra: "A", nome: "Peito + Tríceps", tag: "Seg", cor: "#d63384",
-    cardio: "20 min caminhada rápida ou elíptico",
-    exercicios: [
-      { id: "a1", nome: "Supino Reto (barra ou halteres)", series: 4, reps: "12", descanso: 60, video: ytEmbed("supino reto") },
-      { id: "a2", nome: "Crucifixo com Halteres", series: 3, reps: "15", descanso: 45, video: ytEmbed("crucifixo halteres peito") },
-      { id: "a3", nome: "Supino Inclinado", series: 3, reps: "12", descanso: 60, video: ytEmbed("supino inclinado") },
-      { id: "a4", nome: "Tríceps Corda (polia)", series: 4, reps: "12", descanso: 45, video: ytEmbed("triceps corda polia") },
-      { id: "a5", nome: "Tríceps Francês", series: 3, reps: "15", descanso: 45, video: ytEmbed("triceps frances") },
-      { id: "a6", nome: "Tríceps Testa (barra W)", series: 3, reps: "12", descanso: 45, video: ytEmbed("triceps testa barra W") },
-    ],
-  },
-  B: {
-    letra: "B", nome: "Costas + Bíceps", tag: "Ter", cor: "#7c3aed",
-    cardio: "20 min bike ou escada",
-    exercicios: [
-      { id: "b1", nome: "Puxada Frontal (polia alta)", series: 4, reps: "12", descanso: 60, video: ytEmbed("puxada frontal polia alta") },
-      { id: "b2", nome: "Remada Curvada com Barra", series: 4, reps: "12", descanso: 60, video: ytEmbed("remada curvada barra") },
-      { id: "b3", nome: "Remada Unilateral Halter", series: 3, reps: "12", descanso: 45, video: ytEmbed("remada unilateral haltere") },
-      { id: "b4", nome: "Pulldown na Polia (triângulo)", series: 3, reps: "15", descanso: 45, video: ytEmbed("pulldown polia triangulo costas") },
-      { id: "b5", nome: "Rosca Direta com Barra", series: 4, reps: "12", descanso: 45, video: ytEmbed("rosca direta barra biceps") },
-      { id: "b6", nome: "Rosca Martelo com Halteres", series: 3, reps: "15", descanso: 45, video: ytEmbed("rosca martelo halteres") },
-    ],
-  },
-  C: {
-    letra: "C", nome: "Pernas", tag: "Qua", cor: "#059669",
-    cardio: "10 min aquecimento + 5 min alongamento",
-    exercicios: [
-      { id: "c1", nome: "Agachamento Livre", series: 4, reps: "12", descanso: 90, video: ytEmbed("agachamento livre") },
-      { id: "c2", nome: "Leg Press 45°", series: 4, reps: "15", descanso: 90, video: ytEmbed("leg press 45 graus") },
-      { id: "c3", nome: "Avanço com Halteres", series: 3, reps: "12/lado", descanso: 60, video: ytEmbed("avanco halteres passada") },
-      { id: "c4", nome: "Cadeira Extensora", series: 3, reps: "15", descanso: 45, video: ytEmbed("cadeira extensora quadriceps") },
-      { id: "c5", nome: "Cadeira Flexora", series: 3, reps: "15", descanso: 45, video: ytEmbed("cadeira flexora posterior") },
-      { id: "c6", nome: "Panturrilha na Máquina", series: 4, reps: "20", descanso: 30, video: ytEmbed("panturrilha maquina academia") },
-    ],
-  },
-  D: {
-    letra: "D", nome: "Glúteos + Abdômen", tag: "Qui", cor: "#c2410c",
-    cardio: "15 min cardio leve ao final",
-    exercicios: [
-      { id: "d1", nome: "Hip Thrust com Barra", series: 4, reps: "15", descanso: 60, video: ytEmbed("hip thrust barra gluteos") },
-      { id: "d2", nome: "Stiff com Halteres", series: 4, reps: "12", descanso: 60, video: ytEmbed("stiff halteres posterior") },
-      { id: "d3", nome: "Abdução de Quadril (máquina)", series: 3, reps: "20", descanso: 30, video: ytEmbed("abducao quadril maquina") },
-      { id: "d4", nome: "Agachamento Sumô", series: 3, reps: "15", descanso: 45, video: ytEmbed("agachamento sumo gluteos") },
-      { id: "d5", nome: "Abdominal Crunch", series: 3, reps: "20", descanso: 30, video: ytEmbed("abdominal crunch") },
-      { id: "d6", nome: "Prancha (isometria)", series: 3, reps: "30s", descanso: 30, video: ytEmbed("prancha abdominal isometria") },
-      { id: "d7", nome: "Abdominal Bicicleta", series: 3, reps: "20", descanso: 30, video: ytEmbed("abdominal bicicleta") },
-    ],
-  },
-  E: {
-    letra: "E", nome: "Ombros + HIIT", tag: "Sex", cor: "#0369a1",
-    cardio: "15 min HIIT: 30s forte / 30s leve",
-    exercicios: [
-      { id: "e1", nome: "Desenvolvimento com Halteres", series: 4, reps: "12", descanso: 60, video: ytEmbed("desenvolvimento halteres ombros") },
-      { id: "e2", nome: "Elevação Lateral", series: 4, reps: "15", descanso: 45, video: ytEmbed("elevacao lateral ombros") },
-      { id: "e3", nome: "Elevação Frontal", series: 3, reps: "15", descanso: 45, video: ytEmbed("elevacao frontal ombros") },
-      { id: "e4", nome: "Encolhimento de Ombros", series: 3, reps: "15", descanso: 30, video: ytEmbed("encolhimento ombros trapezio") },
-      { id: "e5", nome: "Crucifixo Invertido (posterior)", series: 3, reps: "15", descanso: 45, video: ytEmbed("crucifixo invertido posterior deltoides") },
-      { id: "e6", nome: "Prancha Lateral", series: 3, reps: "20s/lado", descanso: 30, video: ytEmbed("prancha lateral abdominal") },
-    ],
-  },
-};
-
-const DIA_TREINO = { 1: "A", 2: "B", 3: "C", 4: "D", 5: "E" };
-const getTreinoHoje = () => DIA_TREINO[new Date().getDay()] || null;
-
-/* ─── Dieta (~1370 kcal) ─── */
-const DIETA = [
-  {
-    id: "ref1", nome: "☀️ Café da Manhã", hora: "07:00",
-    kcal: 280, prot: 18, carb: 26, gord: 9,
-    alimentos: ["2 ovos mexidos ou omelete com espinafre", "1 fatia de pão integral com pasta de amendoim (1 col de chá)", "Café preto ou chá verde sem açúcar"],
-    dica: "Os ovos garantem proteína e saciedade logo cedo.",
-  },
-  {
-    id: "ref2", nome: "🍎 Lanche da Manhã", hora: "10:00",
-    kcal: 120, prot: 8, carb: 15, gord: 4,
-    alimentos: ["1 fruta pequena (maçã ou pera)", "5 castanhas-do-pará ou amêndoas"],
-    dica: "Lanche leve para não ultrapassar as calorias.",
-  },
-  {
-    id: "ref3", nome: "🍽️ Almoço", hora: "12:30",
-    kcal: 400, prot: 38, carb: 38, gord: 9,
-    alimentos: ["120g de frango grelhado ou peixe", "2 col de sopa de arroz integral", "2 col de sopa de feijão ou lentilha", "Salada à vontade (alface, rúcula, tomate, pepino)", "1 col de chá de azeite na salada"],
-    dica: "Proteína + fibras no almoço = menos fome à tarde.",
-  },
-  {
-    id: "ref4", nome: "🥛 Lanche da Tarde", hora: "16:00",
-    kcal: 150, prot: 14, carb: 16, gord: 2,
-    alimentos: ["1 iogurte grego natural (sem açúcar, 120g)", "1/2 fruta picada ou 1 col de granola sem açúcar"],
-    dica: "Ideal antes do treino para ter energia.",
-  },
-  {
-    id: "ref5", nome: "🌙 Jantar", hora: "19:30",
-    kcal: 330, prot: 32, carb: 28, gord: 8,
-    alimentos: ["120g de frango, peixe ou 2 ovos", "100g de batata doce cozida ou 1/3 xíc de arroz integral", "Legumes à vontade: abobrinha, brócolis, cenoura"],
-    dica: "Refeição leve mas com proteína suficiente para recuperação.",
-  },
-  {
-    id: "ref6", nome: "🌛 Ceia (opcional)", hora: "21:30",
-    kcal: 90, prot: 12, carb: 5, gord: 2,
-    alimentos: ["80g de cottage ou ricota", "Canela em pó a gosto"],
-    dica: "Proteína de absorção lenta que nutre os músculos durante o sono.",
-  },
+const TABS = [
+  { id: "home",     label: "Home",     emoji: "✦",  color: "#E63946", bg: "#FFF0F2" },
+  { id: "estudos",  label: "Estudos",  emoji: "📚", color: "#4361EE", bg: "#EEF1FF" },
+  { id: "trabalho", label: "Trabalho", emoji: "💼", color: "#52B788", bg: "#EDFBF0" },
+  { id: "vida",     label: "Vida",     emoji: "🌸", color: "#FF6B9D", bg: "#FFF0F7" },
+  { id: "casa",     label: "Casa",     emoji: "🏡", color: "#B45309", bg: "#FFFAEE" },
+  { id: "financas", label: "Finanças", emoji: "💰", color: "#9B5DE5", bg: "#F5EEFF" },
 ];
 
-const TOTAL_KCAL = DIETA.reduce((s, r) => s + r.kcal, 0);
-const TOTAL_PROT = DIETA.reduce((s, r) => s + r.prot, 0);
-const TOTAL_CARB = DIETA.reduce((s, r) => s + r.carb, 0);
-const TOTAL_GORD = DIETA.reduce((s, r) => s + r.gord, 0);
-
-/* ─── Timer ─── */
-function useTimer() {
-  const [secs, setSecs] = useState(0);
-  const [running, setRunning] = useState(false);
-  const ref = useRef(null);
-  useEffect(() => {
-    if (running) {
-      ref.current = setInterval(() => setSecs(s => {
-        if (s <= 1) { setRunning(false); clearInterval(ref.current); return 0; }
-        return s - 1;
-      }), 1000);
-    } else clearInterval(ref.current);
-    return () => clearInterval(ref.current);
-  }, [running]);
-  const start = (s) => { setSecs(s); setRunning(true); };
-  const stop = () => { setRunning(false); setSecs(0); };
-  const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-  return { secs, running, start, stop, fmt };
+/* ─── UI Components ─────────────────────────────────────────────────────────── */
+function Btn({ children, onClick, color = "#E63946", small, ghost, danger, className = "" }) {
+  const base = "font-bold rounded-xl transition-all active:scale-95 cursor-pointer border-2 border-black";
+  const size = small ? "px-3 py-1 text-xs" : "px-4 py-2 text-sm";
+  const style = ghost ? { backgroundColor: "white", color: "#1a1a1a" }
+    : danger ? { backgroundColor: "#fee2e2", color: "#dc2626" }
+    : { backgroundColor: color, color: "white" };
+  return <button onClick={onClick} className={`${base} ${size} ${className}`} style={style}>{children}</button>;
 }
 
-/* ─── Componentes base ─── */
-function Card({ children, className = "" }) {
-  return <div className={`bg-white border border-[#fde8f0] rounded-2xl p-4 shadow-sm ${className}`}>{children}</div>;
-}
-function Badge({ children, color = "#d63384" }) {
-  return <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: color + "18", color }}>{children}</span>;
-}
-
-/* ─── Modal de vídeo ─── */
-function VideoModal({ url, nome, onClose }) {
+function Card({ children, className = "", accentColor }) {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black" onClick={onClose}>
-      <div className="flex items-center justify-between px-4 py-3 bg-[#1a1a1a]" onClick={e => e.stopPropagation()}>
-        <p className="text-white text-sm font-semibold flex-1 mr-2 truncate">{nome}</p>
-        <button onClick={onClose} className="text-white text-xl w-8 h-8 flex items-center justify-center">✕</button>
-      </div>
-      <div className="flex-1" onClick={e => e.stopPropagation()}>
-        <iframe
-          src={url}
-          className="w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          title={nome}
-        />
+    <div className={`bg-white rounded-2xl border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] p-4 ${className}`}
+      style={accentColor ? { borderLeft: `5px solid ${accentColor}` } : {}}>
+      {children}
+    </div>
+  );
+}
+
+function Badge({ children, color = "#E63946" }) {
+  return (
+    <span className="inline-block px-2 py-0.5 rounded-lg text-xs font-bold border border-black"
+      style={{ backgroundColor: color + "33", color }}>
+      {children}
+    </span>
+  );
+}
+
+function Modal({ open, onClose, title, children, color = "#E63946" }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50" onClick={onClose}>
+      <div className="bg-white rounded-2xl border-2 border-black w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-4 border-b-2 border-black flex items-center justify-between" style={{ backgroundColor: color + "22" }}>
+          <h3 className="font-black text-lg">{title}</h3>
+          <button onClick={onClose} className="text-2xl leading-none font-bold hover:opacity-70 w-8 h-8 flex items-center justify-center">×</button>
+        </div>
+        <div className="p-4 space-y-3">{children}</div>
       </div>
     </div>
   );
 }
 
-/* ─── Home ─── */
-function Home({ setPage }) {
-  const treinoHoje = getTreinoHoje();
-  const treino = treinoHoje ? TREINOS[treinoHoje] : null;
-  const historico = db.get("historico", []);
-  const dietaDone = db.get(`dieta_${todayStr()}`, []);
-  const semana = getWeekDays(historico);
-  const streak = (() => {
-    let s = 0;
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(); d.setDate(d.getDate() - i);
-      if (historico.some(h => h.data === d.toISOString().split("T")[0])) s++; else break;
-    }
-    return s;
-  })();
+function Field({ label, children }) {
+  return <div className="flex flex-col gap-1">{label && <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{label}</label>}{children}</div>;
+}
 
+const inputCls = "border-2 border-black rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/20 bg-white w-full";
+
+function Inp({ label, ...p }) {
+  return <Field label={label}><input className={inputCls} {...p} /></Field>;
+}
+function Sel({ label, children, ...p }) {
+  return <Field label={label}><select className={inputCls} {...p}>{children}</select></Field>;
+}
+function Tex({ label, ...p }) {
+  return <Field label={label}><textarea className={inputCls + " resize-none"} rows={3} {...p} /></Field>;
+}
+
+function SubTabs({ tabs, active, setActive, color }) {
   return (
-    <div className="p-4 space-y-4">
-      <div className="pt-2">
-        <p className="text-[#c4a0b5] text-sm">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
-        <h1 className="text-2xl font-bold mt-1 text-[#2d1b2e]">Olá! 🌸</h1>
-        <p className="text-[#c4a0b5] text-sm mt-0.5">Objetivo: emagrecimento + definição</p>
-      </div>
-
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-semibold text-[#c4a0b5]">Semana atual</span>
-          <span className="text-sm font-bold text-[#d63384]">{streak} dia{streak !== 1 ? "s" : ""} 🔥</span>
-        </div>
-        <div className="flex gap-1.5 justify-between">
-          {semana.map(({ ds, feito, dia }) => (
-            <div key={ds} className="flex flex-col items-center gap-1 flex-1">
-              <div className={`w-full aspect-square rounded-xl flex items-center justify-center text-xs font-bold border-2 max-w-[36px] mx-auto ${feito ? "border-[#d63384] bg-[#d6338418] text-[#d63384]" : ds === todayStr() ? "border-[#d63384] text-[#d63384] border-dashed bg-[#fff0f5]" : "border-[#fde8f0] text-[#d4b8c8] bg-[#fff8fa]"}`}>
-                {feito ? "✓" : dia.slice(0,1)}
-              </div>
-              <span className="text-[9px] text-[#d4b8c8] font-medium">{dia.slice(0,3)}</span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 flex gap-4 text-sm">
-          <div><span className="text-[#c4a0b5]">Esta semana: </span><span className="font-bold text-[#2d1b2e]">{semana.filter(x => x.feito).length} treinos</span></div>
-          <div><span className="text-[#c4a0b5]">Total: </span><span className="font-bold text-[#2d1b2e]">{historico.length}</span></div>
-        </div>
-      </Card>
-
-      {treino ? (
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-[#c4a0b5]">Treino de hoje</span>
-            <Badge color={treino.cor}>Treino {treino.letra}</Badge>
-          </div>
-          <h2 className="text-xl font-bold mb-1" style={{ color: treino.cor }}>{treino.nome}</h2>
-          <p className="text-[#c4a0b5] text-sm mb-3">{treino.exercicios.length} exercícios + cardio</p>
-          <div className="space-y-1 mb-4">
-            {treino.exercicios.slice(0, 3).map(e => (
-              <div key={e.id} className="flex items-center gap-2 text-sm text-[#9b7090]">
-                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: treino.cor }} />
-                {e.nome} — {e.series}×{e.reps}
-              </div>
-            ))}
-            {treino.exercicios.length > 3 && <p className="text-xs text-[#d4b8c8] pl-3.5">+{treino.exercicios.length - 3} mais...</p>}
-          </div>
-          <button onClick={() => setPage("treino")}
-            className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-95"
-            style={{ background: `linear-gradient(135deg, ${treino.cor}, ${treino.cor}bb)` }}>
-            Iniciar Treino {treino.letra}
-          </button>
-        </Card>
-      ) : (
-        <Card className="text-center py-6">
-          <div className="text-4xl mb-2">🛋️</div>
-          <h2 className="text-lg font-bold mb-1 text-[#2d1b2e]">Dia de descanso</h2>
-          <p className="text-[#c4a0b5] text-sm">Hoje é sábado ou domingo — recupere bem!</p>
-        </Card>
-      )}
-
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-semibold text-[#c4a0b5]">Dieta hoje</span>
-          <span className="text-sm font-bold text-[#059669]">{dietaDone.length}/{DIETA.length} refeições</span>
-        </div>
-        <div className="w-full bg-[#fde8f0] rounded-full h-2 mb-3">
-          <div className="h-2 rounded-full transition-all" style={{ width: `${Math.round((dietaDone.length / DIETA.length) * 100)}%`, background: "#059669" }} />
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3">
-          <div className="bg-[#fff8fa] rounded-xl p-2">
-            <div className="font-bold text-base text-[#2d1b2e]">{TOTAL_KCAL}</div>
-            <div className="text-[#c4a0b5]">kcal/dia</div>
-          </div>
-          <div className="bg-[#fff8fa] rounded-xl p-2">
-            <div className="font-bold text-base text-[#d63384]">{TOTAL_PROT}g</div>
-            <div className="text-[#c4a0b5]">proteína</div>
-          </div>
-          <div className="bg-[#fff8fa] rounded-xl p-2">
-            <div className="font-bold text-base text-[#c2410c]">{TOTAL_CARB}g</div>
-            <div className="text-[#c4a0b5]">carbs</div>
-          </div>
-        </div>
-        <button onClick={() => setPage("dieta")}
-          className="w-full py-2.5 rounded-xl font-bold text-sm border border-[#059669] text-[#059669] transition-all">
-          Ver plano alimentar
+    <div className="flex border-b-2 border-black bg-white overflow-x-auto scrollbar-hide">
+      {tabs.map(([id, label]) => (
+        <button key={id} onClick={() => setActive(id)}
+          className={`py-3 text-xs font-bold whitespace-nowrap px-3 flex-shrink-0 transition-colors ${active === id ? "border-b-4" : "text-gray-400"}`}
+          style={active === id ? { borderBottomColor: color, color } : {}}>
+          {label}
         </button>
-      </Card>
+      ))}
     </div>
   );
 }
 
-/* ─── Treino ─── */
-function Treino() {
-  const treinoHojeLetra = getTreinoHoje();
-  const [letraSel, setLetraSel] = useState(treinoHojeLetra || "A");
-  const treino = TREINOS[letraSel];
-  const [registros, setRegistros] = useState(() => db.get(`treino_reg_${todayStr()}`, {}));
-  const [expandido, setExpandido] = useState(null);
-  const [videoAberto, setVideoAberto] = useState(null);
-  const [sessaoAtiva, setSessaoAtiva] = useState(() => db.get("sessao_ativa", null));
-  const timer = useTimer();
-
-  const salvarRegistros = (r) => { db.set(`treino_reg_${todayStr()}`, r); setRegistros(r); };
-  const adicionarSerie = (exId, peso, reps) => {
-    const atual = registros[exId] || [];
-    salvarRegistros({ ...registros, [exId]: [...atual, { peso, reps, ts: Date.now() }] });
-  };
-  const removerSerie = (exId, idx) => {
-    const atual = [...(registros[exId] || [])];
-    atual.splice(idx, 1);
-    salvarRegistros({ ...registros, [exId]: atual });
-  };
-  const iniciarSessao = () => {
-    const s = { letra: letraSel, inicio: Date.now() };
-    db.set("sessao_ativa", s); setSessaoAtiva(s);
-    setExpandido(treino.exercicios[0]?.id || null);
-  };
-  const finalizarTreino = () => {
-    const historico = db.get("historico", []);
-    historico.unshift({
-      id: uid(), letra: letraSel, nome: treino.nome, data: todayStr(), registros,
-      totalSeries: Object.values(registros).reduce((s, a) => s + a.length, 0),
-      duracao: sessaoAtiva ? Math.round((Date.now() - sessaoAtiva.inicio) / 60000) : 0,
-    });
-    db.set("historico", historico);
-    db.set("sessao_ativa", null);
-    db.set(`treino_reg_${todayStr()}`, {});
-    setSessaoAtiva(null); setRegistros({}); setExpandido(null); timer.stop();
-  };
-
-  const exerciciosConcluidos = treino.exercicios.filter(e => (registros[e.id] || []).length >= e.series).length;
-  const progresso = Math.round((exerciciosConcluidos / treino.exercicios.length) * 100);
-  const totalSeriesFeitas = Object.values(registros).reduce((s, a) => s + a.length, 0);
-
+function TabHeader({ tab, subtitle }) {
   return (
-    <div className="p-4 space-y-4">
-      {videoAberto && <VideoModal url={videoAberto.url} nome={videoAberto.nome} onClose={() => setVideoAberto(null)} />}
-
-      <div>
-        <h1 className="text-xl font-bold mb-3 text-[#2d1b2e]">Treinos</h1>
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-          {Object.values(TREINOS).map(t => (
-            <button key={t.letra} onClick={() => { setLetraSel(t.letra); setExpandido(null); }}
-              className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all"
-              style={letraSel === t.letra
-                ? { borderColor: t.cor, background: t.cor + "18", color: t.cor }
-                : { borderColor: "#fde8f0", background: "white", color: "#c4a0b5" }}>
-              {t.letra} — {t.tag}
-            </button>
-          ))}
+    <div className="px-4 pt-6 pb-4" style={{ backgroundColor: tab.bg }}>
+      <div className="flex items-center gap-3">
+        <span className="text-3xl">{tab.emoji}</span>
+        <div>
+          <h1 className="font-black text-2xl leading-tight" style={{ color: tab.color }}>{tab.label} em Ordem</h1>
+          {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
         </div>
       </div>
-
-      <Card>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-2xl font-black" style={{ color: treino.cor }}>Treino {treino.letra}</span>
-          {treinoHojeLetra === letraSel && <Badge color={treino.cor}>Hoje</Badge>}
-        </div>
-        <p className="text-lg font-semibold text-[#2d1b2e] mb-1">{treino.nome}</p>
-        <p className="text-sm text-[#c4a0b5] mb-3">🏃 {treino.cardio}</p>
-        {sessaoAtiva?.letra === letraSel ? (
-          <>
-            <div className="mb-3">
-              <div className="flex justify-between text-xs text-[#c4a0b5] mb-1">
-                <span>{exerciciosConcluidos}/{treino.exercicios.length} exercícios</span>
-                <span>{totalSeriesFeitas} séries</span>
-              </div>
-              <div className="w-full bg-[#fde8f0] rounded-full h-2">
-                <div className="h-2 rounded-full transition-all" style={{ width: `${progresso}%`, background: treino.cor }} />
-              </div>
-            </div>
-            <button onClick={finalizarTreino}
-              className="w-full py-3 rounded-xl font-bold text-sm bg-[#fde8f0] text-[#c4a0b5] hover:bg-[#fbd4e4] transition-all">
-              ✅ Finalizar & Salvar Treino
-            </button>
-          </>
-        ) : (
-          <button onClick={iniciarSessao}
-            className="w-full py-3 rounded-xl font-bold text-sm text-white transition-all active:scale-95"
-            style={{ background: `linear-gradient(135deg, ${treino.cor}, ${treino.cor}bb)` }}>
-            ▶ Iniciar Treino {treino.letra}
-          </button>
-        )}
-      </Card>
-
-      {timer.running && (
-        <div className="fixed top-4 right-4 z-40 bg-white border-2 border-[#d63384] rounded-2xl px-4 py-3 shadow-xl flex items-center gap-3">
-          <div>
-            <div className="text-xs text-[#c4a0b5]">Descanso</div>
-            <div className="text-2xl font-black text-[#d63384]">{timer.fmt(timer.secs)}</div>
-          </div>
-          <button onClick={timer.stop} className="text-[#c4a0b5] text-xs border border-[#fde8f0] rounded-lg px-2 py-1">Pular</button>
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {treino.exercicios.map((ex, idx) => {
-          const seriesFeitas = registros[ex.id] || [];
-          const concluido = seriesFeitas.length >= ex.series;
-          const aberto = expandido === ex.id;
-          return (
-            <Card key={ex.id} className={concluido ? "border-[#05996940]" : ""}>
-              <button className="w-full flex items-center justify-between" onClick={() => setExpandido(aberto ? null : ex.id)}>
-                <div className="flex items-center gap-3 text-left">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${concluido ? "bg-[#05996918] text-[#059669]" : "bg-[#fde8f0] text-[#c4a0b5]"}`}>
-                    {concluido ? "✓" : idx + 1}
-                  </div>
-                  <div>
-                    <p className={`text-sm font-semibold leading-tight ${concluido ? "text-[#059669]" : "text-[#2d1b2e]"}`}>{ex.nome}</p>
-                    <p className="text-xs text-[#c4a0b5]">{ex.series}×{ex.reps} · {ex.descanso}s descanso</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-xs font-bold" style={{ color: treino.cor }}>{seriesFeitas.length}/{ex.series}</span>
-                  <span className="text-[#d4b8c8] text-xs">{aberto ? "▲" : "▼"}</span>
-                </div>
-              </button>
-
-              {aberto && (
-                <div className="mt-3 border-t border-[#fde8f0] pt-3 space-y-3">
-                  {/* Vídeo embutido */}
-                  <button
-                    onClick={() => setVideoAberto({ url: ex.video, nome: ex.nome })}
-                    className="w-full flex items-center gap-3 bg-[#fff0f5] border border-[#fde8f0] rounded-xl px-3 py-2.5 text-left">
-                    <div className="w-8 h-8 rounded-lg bg-[#d63384] flex items-center justify-center flex-shrink-0">
-                      <span className="text-white text-sm">▶</span>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[#d63384]">Ver vídeo de exemplo</p>
-                      <p className="text-[10px] text-[#c4a0b5]">YouTube · abre no app</p>
-                    </div>
-                  </button>
-
-                  {seriesFeitas.length > 0 && (
-                    <div className="space-y-1.5">
-                      {seriesFeitas.map((s, i) => (
-                        <div key={i} className="flex items-center justify-between bg-[#fff8fa] rounded-xl px-3 py-2">
-                          <span className="text-xs text-[#c4a0b5]">Série {i + 1}</span>
-                          <span className="text-sm font-bold text-[#2d1b2e]">{s.reps} reps{s.peso ? ` · ${s.peso}kg` : ""}</span>
-                          <button onClick={() => removerSerie(ex.id, i)} className="text-[#d4b8c8] text-xs hover:text-red-400">✕</button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {sessaoAtiva?.letra === letraSel && (
-                    <SerieForm onAdd={(p, r) => { adicionarSerie(ex.id, p, r); timer.start(ex.descanso); }} corTreino={treino.cor} />
-                  )}
-                  {sessaoAtiva?.letra === letraSel && !timer.running && (
-                    <div className="flex gap-2">
-                      {[30, 45, 60, 90].map(s => (
-                        <button key={s} onClick={() => timer.start(s)}
-                          className="flex-1 py-1.5 rounded-lg text-xs font-bold bg-[#fde8f0] text-[#c4a0b5] hover:bg-[#fbd4e4]">
-                          {s}s
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </Card>
-          );
-        })}
-      </div>
-      <div className="h-4" />
     </div>
   );
 }
 
-function SerieForm({ onAdd, corTreino }) {
-  const [peso, setPeso] = useState("");
-  const [reps, setReps] = useState("");
-  const submit = () => {
-    if (!reps) return;
-    onAdd(peso ? Number(peso) : null, Number(reps));
-    setReps("");
-  };
-  return (
-    <div className="flex gap-2 items-end">
-      <div className="flex-1">
-        <label className="text-xs text-[#c4a0b5] block mb-1">Peso (kg)</label>
-        <input type="number" inputMode="decimal" placeholder="ex: 20" value={peso} onChange={e => setPeso(e.target.value)}
-          className="w-full bg-[#fff8fa] border border-[#fde8f0] rounded-xl px-3 py-2 text-sm text-[#2d1b2e] placeholder-[#d4b8c8] focus:outline-none focus:border-[#d63384]" />
-      </div>
-      <div className="flex-1">
-        <label className="text-xs text-[#c4a0b5] block mb-1">Reps</label>
-        <input type="number" inputMode="numeric" placeholder="ex: 12" value={reps} onChange={e => setReps(e.target.value)}
-          className="w-full bg-[#fff8fa] border border-[#fde8f0] rounded-xl px-3 py-2 text-sm text-[#2d1b2e] placeholder-[#d4b8c8] focus:outline-none focus:border-[#d63384]" />
-      </div>
-      <button onClick={submit} className="py-2 px-4 rounded-xl font-bold text-sm text-white flex-shrink-0" style={{ background: corTreino }}>+</button>
-    </div>
-  );
+function EmptyState({ emoji, text }) {
+  return <p className="text-center text-gray-400 py-10 text-sm">{emoji} {text}</p>;
 }
 
-/* ─── Dieta ─── */
-function Dieta() {
-  const [done, setDone] = useState(() => db.get(`dieta_${todayStr()}`, []));
-  const [aberto, setAberto] = useState(null);
-  const toggle = (id) => {
-    const novo = done.includes(id) ? done.filter(x => x !== id) : [...done, id];
-    setDone(novo); db.set(`dieta_${todayStr()}`, novo);
-  };
-  const kcalConsumida = DIETA.filter(r => done.includes(r.id)).reduce((s, r) => s + r.kcal, 0);
-  const protConsumida = DIETA.filter(r => done.includes(r.id)).reduce((s, r) => s + r.prot, 0);
-
-  return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-xl font-bold pt-2 text-[#2d1b2e]">Plano Alimentar</h1>
-      <p className="text-sm text-[#c4a0b5] -mt-2">Emagrecimento + definição · ~{TOTAL_KCAL} kcal/dia</p>
-
-      <Card>
-        <div className="flex justify-between items-center mb-3">
-          <div>
-            <span className="text-2xl font-black text-[#2d1b2e]">{kcalConsumida}</span>
-            <span className="text-[#c4a0b5] text-sm"> / {TOTAL_KCAL} kcal</span>
-          </div>
-          <span className="text-sm font-bold text-[#059669]">{done.length}/{DIETA.length} refeições</span>
-        </div>
-        <div className="w-full bg-[#fde8f0] rounded-full h-3 mb-3">
-          <div className="h-3 rounded-full transition-all" style={{ width: `${Math.round((kcalConsumida / TOTAL_KCAL) * 100)}%`, background: "linear-gradient(90deg, #d63384, #fb923c)" }} />
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-          {[
-            { label: "Proteínas", val: `${protConsumida}g`, total: `/${TOTAL_PROT}g`, color: "#d63384" },
-            { label: "Carboidratos", val: `${DIETA.filter(r => done.includes(r.id)).reduce((s, r) => s + r.carb, 0)}g`, total: `/${TOTAL_CARB}g`, color: "#c2410c" },
-            { label: "Gorduras", val: `${DIETA.filter(r => done.includes(r.id)).reduce((s, r) => s + r.gord, 0)}g`, total: `/${TOTAL_GORD}g`, color: "#7c3aed" },
-          ].map(m => (
-            <div key={m.label} className="bg-[#fff8fa] rounded-xl p-2">
-              <div className="font-bold text-sm" style={{ color: m.color }}>{m.val}</div>
-              <div className="text-[#d4b8c8] text-[10px]">{m.total}</div>
-              <div className="text-[#c4a0b5] text-[10px] mt-0.5">{m.label}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <div className="space-y-3">
-        {DIETA.map(ref => {
-          const feita = done.includes(ref.id);
-          const open = aberto === ref.id;
-          return (
-            <Card key={ref.id} className={feita ? "border-[#05996940]" : ""}>
-              <div className="flex items-center justify-between">
-                <button className="flex items-center gap-3 flex-1 text-left" onClick={() => setAberto(open ? null : ref.id)}>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm text-[#2d1b2e]">{ref.nome}</span>
-                      <span className="text-xs text-[#d4b8c8]">{ref.hora}</span>
-                    </div>
-                    <div className="flex gap-2 mt-0.5">
-                      <span className="text-xs text-[#c4a0b5]">{ref.kcal} kcal</span>
-                      <span className="text-xs text-[#d63384]">{ref.prot}g prot</span>
-                    </div>
-                  </div>
-                </button>
-                <div className="flex items-center gap-2">
-                  <span className="text-[#d4b8c8] text-xs">{open ? "▲" : "▼"}</span>
-                  <button onClick={() => toggle(ref.id)}
-                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${feita ? "bg-[#05996918] border-[#059669] text-[#059669]" : "border-[#fde8f0] text-transparent"}`}>✓</button>
-                </div>
-              </div>
-              {open && (
-                <div className="mt-3 border-t border-[#fde8f0] pt-3 space-y-2">
-                  <div className="space-y-1.5">
-                    {ref.alimentos.map((a, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm text-[#6b4e5e]">
-                        <span className="text-[#d63384] flex-shrink-0">•</span>{a}
-                      </div>
-                    ))}
-                  </div>
-                  {ref.dica && <div className="bg-[#fff8fa] rounded-xl p-3 mt-2"><p className="text-xs text-[#c4a0b5]">💡 {ref.dica}</p></div>}
-                  <div className="grid grid-cols-4 gap-1 pt-1">
-                    {[{l:"Kcal",v:ref.kcal,c:"#2d1b2e"},{l:"Prot",v:`${ref.prot}g`,c:"#d63384"},{l:"Carbs",v:`${ref.carb}g`,c:"#c2410c"},{l:"Gord",v:`${ref.gord}g`,c:"#7c3aed"}].map(m => (
-                      <div key={m.l} className="text-center">
-                        <div className="text-xs font-bold" style={{ color: m.c }}>{m.v}</div>
-                        <div className="text-[10px] text-[#d4b8c8]">{m.l}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Card>
-          );
-        })}
-      </div>
-
-      <Card className="bg-[#fff8fa]">
-        <h3 className="text-sm font-bold text-[#d63384] mb-2">Dicas gerais</h3>
-        <div className="space-y-1.5 text-xs text-[#9b7090]">
-          {["💧 Beba 2–3 litros de água por dia","🚫 Evite açúcar refinado, refrigerantes e frituras","⏰ Coma a cada 3–4 horas para manter o metabolismo","🥩 Priorize proteína em todas as refeições","🌙 Durma 7–9h — o sono é fundamental para perda de gordura"].map((d, i) => <p key={i}>{d}</p>)}
-        </div>
-      </Card>
-      <div className="h-4" />
-    </div>
-  );
-}
-
-/* ─── Histórico ─── */
-function Historico() {
-  const [historico, setHistorico] = useState(() => db.get("historico", []));
-  const [aberto, setAberto] = useState(null);
-  const remover = (id) => { const novo = historico.filter(h => h.id !== id); setHistorico(novo); db.set("historico", novo); };
-  const fmt = (ds) => new Date(ds + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" });
-
-  if (!historico.length) return (
-    <div className="p-4 flex flex-col items-center justify-center min-h-[50vh] text-center">
-      <div className="text-6xl mb-4">📋</div>
-      <h2 className="text-xl font-bold mb-2 text-[#2d1b2e]">Sem treinos ainda</h2>
-      <p className="text-[#c4a0b5] text-sm">Finalize um treino para ver o histórico aqui.</p>
-    </div>
-  );
-
-  return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between pt-2">
-        <h1 className="text-xl font-bold text-[#2d1b2e]">Histórico</h1>
-        <span className="text-sm text-[#c4a0b5]">{historico.length} treino{historico.length !== 1 ? "s" : ""}</span>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {[{label:"Treinos",val:historico.length,color:"#d63384"},{label:"Séries",val:historico.reduce((s,h)=>s+(h.totalSeries||0),0),color:"#7c3aed"},{label:"Minutos",val:historico.reduce((s,h)=>s+(h.duracao||0),0),color:"#059669"}].map(s => (
-          <Card key={s.label} className="text-center p-3">
-            <div className="text-xl font-black" style={{ color: s.color }}>{s.val}</div>
-            <div className="text-xs text-[#c4a0b5] mt-0.5">{s.label}</div>
-          </Card>
-        ))}
-      </div>
-      <div className="space-y-3">
-        {historico.map(h => {
-          const t = TREINOS[h.letra];
-          const open = aberto === h.id;
-          return (
-            <Card key={h.id}>
-              <button className="w-full flex items-center justify-between" onClick={() => setAberto(open ? null : h.id)}>
-                <div className="flex items-center gap-3 text-left">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black flex-shrink-0"
-                    style={{ background: (t?.cor || "#d63384") + "18", color: t?.cor || "#d63384" }}>{h.letra}</div>
-                  <div>
-                    <p className="text-sm font-semibold text-[#2d1b2e]">{h.nome}</p>
-                    <p className="text-xs text-[#c4a0b5]">{fmt(h.data)} · {h.totalSeries} séries{h.duracao ? ` · ${h.duracao} min` : ""}</p>
-                  </div>
-                </div>
-                <span className="text-[#d4b8c8] text-xs">{open ? "▲" : "▼"}</span>
-              </button>
-              {open && (
-                <div className="mt-3 border-t border-[#fde8f0] pt-3 space-y-2">
-                  {t?.exercicios.map(ex => {
-                    const series = h.registros?.[ex.id] || [];
-                    if (!series.length) return null;
-                    return (
-                      <div key={ex.id}>
-                        <p className="text-xs font-semibold text-[#c4a0b5] mb-1">{ex.nome}</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {series.map((s, i) => (
-                            <span key={i} className="text-xs bg-[#fff8fa] border border-[#fde8f0] rounded-lg px-2 py-1 text-[#6b4e5e]">
-                              {s.reps}rep{s.peso ? ` · ${s.peso}kg` : ""}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <button onClick={() => remover(h.id)} className="text-xs text-red-400 opacity-60 hover:opacity-100 mt-1">Remover registro</button>
-                </div>
-              )}
-            </Card>
-          );
-        })}
-      </div>
-      <div className="h-4" />
-    </div>
-  );
-}
-
-/* ─── Dados estratégicos de afiliadas ─── */
-const PROGRAMAS = [
-  {
-    id: "shopee",
-    nome: "Shopee Afiliados",
-    categoria: "Marketplace",
-    comissao: "5–12%",
-    cor: "#ee4d2d",
-    dificuldade: "Fácil",
-    prazo: "Aprovação imediata",
-    nichos: ["Beleza", "Moda", "Fitness"],
-    pros: ["Aprovação rápida", "Catálogo enorme", "Links fáceis de gerar", "Pagamento mensal"],
-    inicio: "1º Prioridade — comece aqui",
-    passos: ["Acesse affiliate.shopee.com.br", "Cadastre-se com CPF e dados bancários", "Instale o app Shopee Parceiros", "Gere links de qualquer produto"],
-  },
-  {
-    id: "amazon",
-    nome: "Amazon Associates",
-    categoria: "Marketplace",
-    comissao: "3–10%",
-    cor: "#ff9900",
-    dificuldade: "Fácil",
-    prazo: "2–3 dias",
-    nichos: ["Beleza", "Fitness"],
-    pros: ["Alta credibilidade", "Boa variedade beauty/fitness", "Dashboard completo"],
-    inicio: "2ª Prioridade",
-    passos: ["Acesse affiliate-program.amazon.com.br", "Crie conta com conta Amazon existente", "Aguarde aprovação (2–3 dias)", "Crie links personalizados"],
-  },
-  {
-    id: "hotmart",
-    nome: "Hotmart",
-    categoria: "Produtos Digitais",
-    comissao: "30–60%",
-    cor: "#ff4d2b",
-    dificuldade: "Médio",
-    prazo: "Aprovação por produto",
-    nichos: ["Fitness", "Beleza"],
-    pros: ["Comissões altíssimas (R$50–R$300/venda)", "Produtos de qualidade", "Pagamento rápido"],
-    inicio: "3ª Prioridade — alta rentabilidade",
-    passos: ["Acesse hotmart.com e crie conta Afiliada", "Pesquise produtos de fitness e beleza", "Peça aprovação ao produtor", "Promova com link de afiliado"],
-  },
-  {
-    id: "renner",
-    nome: "Renner Afiliados",
-    categoria: "Moda",
-    comissao: "5–8%",
-    cor: "#e63946",
-    dificuldade: "Médio",
-    prazo: "3–5 dias",
-    nichos: ["Moda"],
-    pros: ["Marca conhecida", "Produtos sazonais", "Boa conversão em moda"],
-    inicio: "4ª Prioridade — moda",
-    passos: ["Acesse Lomadee ou Awin (Renner usa essas redes)", "Cadastre seu canal (TikTok/Pinterest)", "Aguarde aprovação", "Gere links de peças específicas"],
-  },
-];
-
-const CHECKLIST_ONBOARDING = [
-  { id: "bio", grupo: "Perfil", texto: "Otimizar bio do TikTok com foco em 'Beleza • Moda • Fitness'" },
-  { id: "linktree", grupo: "Perfil", texto: "Criar Linktree ou Beacons.ai (agrupa todos os links)" },
-  { id: "shopee_cad", grupo: "Programas", texto: "Cadastrar no Shopee Afiliados" },
-  { id: "amazon_cad", grupo: "Programas", texto: "Cadastrar no Amazon Associates" },
-  { id: "hotmart_cad", grupo: "Programas", texto: "Criar conta na Hotmart como afiliada" },
-  { id: "pilares", grupo: "Conteúdo", texto: "Definir os 3 pilares de conteúdo semanal" },
-  { id: "primeiro_video", grupo: "Conteúdo", texto: "Criar primeiro TikTok com produto afiliado" },
-  { id: "primeiro_pin", grupo: "Conteúdo", texto: "Criar 5 pins no Pinterest com links afiliados" },
-  { id: "planilha", grupo: "Gestão", texto: "Criar planilha de controle de receita" },
-  { id: "meta30", grupo: "Gestão", texto: "Definir meta de R$300 para o primeiro mês" },
-];
-
-const CALENDARIO = [
-  { dia: "Seg", tema: "Skincare Routine", nicho: "Beleza", formato: "TikTok 30–60s", hook: "\"O produto que mudou minha pele...\"", programas: ["Shopee", "Amazon"] },
-  { dia: "Ter", tema: "Look do Dia", nicho: "Moda", formato: "TikTok GRWM", hook: "\"Look completo por menos de R$X...\"", programas: ["Renner", "Shopee"] },
-  { dia: "Qua", tema: "Treino + Produto", nicho: "Fitness", formato: "TikTok + Pin", hook: "\"Sem isso meu treino não é o mesmo...\"", programas: ["Amazon", "Shopee"] },
-  { dia: "Qui", tema: "Review Honesto", nicho: "Beleza", formato: "TikTok 60s", hook: "\"Testei por 30 dias e...\"", programas: ["Hotmart", "Amazon"] },
-  { dia: "Sex", tema: "Top 5 da Semana", nicho: "Todos", formato: "TikTok + 5 Pins", hook: "\"5 produtos que comprei e amei...\"", programas: ["Shopee", "Amazon"] },
-  { dia: "Sáb", tema: "Pinterest SEO", nicho: "Todos", formato: "10–15 Pins", hook: "Palavras-chave longas + links diretos", programas: ["Todos"] },
-  { dia: "Dom", tema: "Planejamento", nicho: "—", formato: "Bastidores", hook: "Preparar conteúdo da semana seguinte", programas: [] },
-];
-
-const PROJECAO = [
-  { mes: "Mês 1", min: 100, max: 300, fase: "Aprendizado", foco: "Onboarding + primeiros links" },
-  { mes: "Mês 2", min: 250, max: 600, fase: "Tração", foco: "Consistência + otimização" },
-  { mes: "Mês 3", min: 500, max: 1000, fase: "Crescimento", foco: "Pinterest evergreen gera tráfego passivo" },
-  { mes: "Mês 6", min: 1000, max: 3000, fase: "Escala", foco: "Hotmart + produtos digitais de alto ticket" },
-  { mes: "Mês 12", min: 2000, max: 5000, fase: "Maturidade", foco: "Renda passiva + parcerias fixas" },
-];
-
-/* ─── Dados Pinterest ─── */
-const PINTEREST_STATS = [
-  { valor: "46M", desc: "usuários ativos mensais no Brasil", fonte: "Pinterest / SproutSocial 2025", cor: "#e60023" },
-  { valor: "85%", desc: "dos usuários semanais compraram algo baseado em Pins", fonte: "Pinterest Business 2025", cor: "#e60023" },
-  { valor: "93%", desc: "usam o Pinterest para planejar compras", fonte: "Marketing LTB 2026", cor: "#e60023" },
-  { valor: "80%", desc: "mais gasto mensal vs usuários de outras plataformas", fonte: "Searchlab 2026", cor: "#e60023" },
-  { valor: "2.3x", desc: "maior valor de conversão vs outras redes sociais", fonte: "Pinterest Ads Data 2025", cor: "#e60023" },
-  { valor: "96%", desc: "das buscas são sem marca — qualquer conta tem chance igual", fonte: "SproutSocial 2026", cor: "#7c3aed" },
-  { valor: "40%", desc: "maior ticket médio de compra vs outras plataformas", fonte: "Charle Agency 2026", cor: "#e60023" },
-  { valor: "12–18", desc: "meses de vida útil de um Pin otimizado (vs 24h no TikTok)", fonte: "SEO Sherpa 2025", cor: "#059669" },
-];
-
-const PINTEREST_CASOS = [
-  {
-    titulo: "E-commerce de Decoração",
-    resultado: "De R$100 para R$115.000/mês",
-    prazo: "4 meses",
-    detalhe: "Cliente com zero presença no Pinterest saiu de R$100/mês para mais de R$115.000 em receita em apenas 4 meses com pins de produtos e tráfego orgânico.",
-    fonte: "Evolut Agency Case Study 2024",
-    cor: "#059669",
-  },
-  {
-    titulo: "Criadora Beauty (By Mable Grace)",
-    resultado: "~R$45.000/mês em afiliados",
-    prazo: "Recorrente",
-    detalhe: "800.000 visualizações mensais no Pinterest, todos os pins linkando para reviews de produtos Amazon. Com 0,01% de conversão e ticket médio de R$5 de comissão = R$40k+/mês.",
-    fonte: "AffiliateMarketingClues Case Study 2025",
-    cor: "#e60023",
-  },
-  {
-    titulo: "Nano Influencer Beleza (perfil típico)",
-    resultado: "R$100–500/mês",
-    prazo: "Primeiros 6 meses",
-    detalhe: "Semanas 1–8: R$0 (fase de construção). Meses 2–4: R$50–200. Meses 4–6: R$100–500+. Com consistência de 5–10 pins/semana e links afiliados em todos os pins.",
-    fonte: "Shopify Brasil / Fractalmax 2025",
-    cor: "#ff9900",
-  },
-  {
-    titulo: "Tendências Beauty 2025–2026",
-    resultado: "Nichos em explosão",
-    prazo: "Agora",
-    detalhe: "Buscas em alta: 'honey brown curls' +7.770%, 'fox hair color' +1.530%, 'bow nail designs' +2.220%. Quem cria conteúdo agora captura tráfego crescente.",
-    fonte: "Pinterest Trends Report 2025",
-    cor: "#d63384",
-  },
-];
-
-const PINTEREST_SEO = [
-  {
-    etapa: "1. Perfil Otimizado",
-    icon: "👤",
-    itens: [
-      "Nome do perfil: inclua palavras-chave (ex: 'Beleza & Lifestyle | Dicas de Moda e Skincare')",
-      "Bio: 160 caracteres com palavras-chave naturais + localização 'Brasil'",
-      "Foto de perfil: rosto nítido (maior confiança = mais follows)",
-      "URL do site: use seu Linktree/Beacons com links afiliados",
-    ],
-  },
-  {
-    etapa: "2. Boards Estratégicos",
-    icon: "📌",
-    itens: [
-      "Crie 8–12 boards com nomes de palavras-chave longas (ex: 'Skincare Rotina Diária Para Pele Oleosa')",
-      "Adicione descrição em cada board com 2–3 palavras-chave naturais",
-      "Board de boas-vindas sempre no topo com seu melhor conteúdo",
-      "Separe por nicho: 3 de Beleza, 3 de Moda, 3 de Fitness",
-    ],
-  },
-  {
-    etapa: "3. Título do Pin",
-    icon: "✍️",
-    itens: [
-      "100 caracteres máximos — coloque a palavra-chave principal nos primeiros 40",
-      "Formato que funciona: '[Resultado] + [Produto/Método] + para [Público]'",
-      "Exemplo: 'Pele Vidro em 7 Dias: Rotina Skincare Noturna para Pele Seca'",
-      "Evite clickbait — Pinterest penaliza pins com alto bounce rate",
-    ],
-  },
-  {
-    etapa: "4. Descrição do Pin",
-    icon: "📝",
-    itens: [
-      "300–450 caracteres = sweet spot (visível em busca + densidade de keywords)",
-      "Inclua a palavra-chave principal nas primeiras 2 frases naturalmente",
-      "Adicione 2–3 palavras-chave secundárias ao longo do texto",
-      "Termine com CTA: 'Link na bio para ver todos os produtos!'",
-      "Não use listas com # ou emojis excessivos — prefira texto fluido",
-    ],
-  },
-  {
-    etapa: "5. Imagem do Pin",
-    icon: "🖼️",
-    itens: [
-      "Formato vertical obrigatório: 1000×1500px (ratio 2:3) — 89% dos pins virais são verticais",
-      "Texto na imagem com fonte grande e legível (leitura no mobile)",
-      "Cores vibrantes e contraste alto — pins claros performam melhor em beleza",
-      "Mostre o produto ou resultado real — não use imagens genéricas de banco",
-    ],
-  },
-  {
-    etapa: "6. Frequência & Consistência",
-    icon: "📅",
-    itens: [
-      "Mínimo 5 pins/dia (pode ser repinados + novos) para crescimento rápido",
-      "3–5 pins originais por semana é suficiente para nano influencer",
-      "Poste sempre no mesmo horário — o algoritmo premia regularidade",
-      "Melhor horário no Brasil: 20h–22h (maior engajamento feminino)",
-    ],
-  },
-];
-
-const PINTEREST_KEYWORDS = {
-  Beleza: ["rotina skincare noturna", "pele hidratada", "maquiagem natural dia a dia", "cuidados com o cabelo", "sérum vitamina C", "base para pele oleosa", "lábio hidratado batom", "sobrancelha design"],
-  Moda: ["look do dia trabalho", "outfit casual feminino", "moda primavera verão", "look festa acessível", "calça wide leg combinações", "looks para baixinhas", "moda plus size estilosa", "tendências 2026"],
-  Fitness: ["treino glúteo academia", "dieta saudável simples", "receita proteica fácil", "treino em casa mulher", "pré-treino natural", "suplemento para mulher", "treino HIIT 20 minutos", "barriga seca exercícios"],
+/* ─── ESTUDOS ───────────────────────────────────────────────────────────────── */
+const BOOK_STATUS = {
+  "Não Iniciado": "#FFD166",
+  "Em Andamento": "#9B5DE5",
+  "Concluído":    "#52B788",
+  "Desisti":      "#E63946",
 };
 
-/* ─── Página de Afiliadas ─── */
-function Afiliadas() {
-  const [aba, setAba] = useState("plano");
-  const [checklist, setChecklist] = useState(() => db.get("afil_checklist", []));
-  const [programaAberto, setProgramaAberto] = useState(null);
-  const [diaAberto, setDiaAberto] = useState(null);
-  const [seoAberto, setSeoAberto] = useState(null);
-  const [kwNicho, setKwNicho] = useState("Beleza");
+function EstudosTab() {
+  const [sub, setSub] = useState("livros");
+  const [books, setBooks] = useState(() => db.get("orbit_books", []));
+  const [courses, setCourses] = useState(() => db.get("orbit_courses", []));
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [modInput, setModInput] = useState({});
+  const color = "#4361EE";
+  const tab = TABS.find(t => t.id === "estudos");
 
-  const toggleCheck = (id) => {
-    const novo = checklist.includes(id) ? checklist.filter(x => x !== id) : [...checklist, id];
-    setChecklist(novo); db.set("afil_checklist", novo);
+  const saveBooks = b => { setBooks(b); db.set("orbit_books", b); };
+  const saveCourses = c => { setCourses(c); db.set("orbit_courses", c); };
+  const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  const addBook = () => {
+    if (!form.title) return;
+    saveBooks([...books, { id: uid(), title: form.title, author: form.author || "", status: "Não Iniciado", rating: 0 }]);
+    setModal(null); setForm({});
   };
 
-  const grupos = [...new Set(CHECKLIST_ONBOARDING.map(i => i.grupo))];
-  const progresso = Math.round((checklist.length / CHECKLIST_ONBOARDING.length) * 100);
+  const addCourse = () => {
+    if (!form.title) return;
+    saveCourses([...courses, { id: uid(), title: form.title, platform: form.platform || "", modules: [] }]);
+    setModal(null); setForm({});
+  };
 
-  const ABAS = [
-    { id: "plano", label: "Plano" },
-    { id: "programas", label: "Programas" },
-    { id: "calendario", label: "Calendário" },
-    { id: "projecao", label: "Receita" },
-    { id: "pinterest", label: "Pinterest" },
-  ];
-
-  const nichoColor = { "Beleza": "#d63384", "Moda": "#7c3aed", "Fitness": "#059669", "Todos": "#0369a1" };
+  const addModule = (cid) => {
+    const title = modInput[cid] || "";
+    if (!title.trim()) return;
+    saveCourses(courses.map(c => c.id === cid ? { ...c, modules: [...c.modules, { id: uid(), title, notes: "", done: false }] } : c));
+    setModInput(p => ({ ...p, [cid]: "" }));
+  };
 
   return (
-    <div className="p-4 space-y-4 pb-24">
-      <div className="pt-2">
-        <h1 className="text-2xl font-bold text-[#2d1b2e]">Estratégia Afiliada</h1>
-        <p className="text-sm text-[#c4a0b5] mt-0.5">Nano Influencer · Beleza, Moda & Fitness</p>
-      </div>
+    <div>
+      <TabHeader tab={tab} subtitle={`${books.filter(b => b.status === "Concluído").length} lidos · ${courses.length} cursos`} />
+      <SubTabs tabs={[["livros","📖 Livros"],["cursos","🎓 Cursos"]]} active={sub} setActive={setSub} color={color} />
 
-      {/* KPIs */}
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: "Meta 6 meses", val: "R$3k", sub: "por mês", color: "#d63384" },
-          { label: "Plataformas", val: "TikTok", sub: "+ Pinterest", color: "#7c3aed" },
-          { label: "Setup", val: "1–2h", sub: "por dia", color: "#059669" },
-        ].map(s => (
-          <Card key={s.label} className="text-center p-3">
-            <div className="text-base font-black" style={{ color: s.color }}>{s.val}</div>
-            <div className="text-[10px] text-[#d4b8c8]">{s.sub}</div>
-            <div className="text-[10px] text-[#c4a0b5] mt-0.5">{s.label}</div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Sub-abas */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-        {ABAS.map(a => (
-          <button key={a.id} onClick={() => setAba(a.id)}
-            className="flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold border-2 transition-all"
-            style={aba === a.id
-              ? { borderColor: "#d63384", background: "#d6338418", color: "#d63384" }
-              : { borderColor: "#fde8f0", background: "white", color: "#c4a0b5" }}>
-            {a.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── ABA: PLANO (Onboarding Checklist) ── */}
-      {aba === "plano" && (
-        <div className="space-y-4">
-          <Card>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-bold text-[#2d1b2e]">Checklist de Onboarding</span>
-              <span className="text-sm font-bold text-[#d63384]">{checklist.length}/{CHECKLIST_ONBOARDING.length}</span>
-            </div>
-            <div className="w-full bg-[#fde8f0] rounded-full h-2.5 mb-1">
-              <div className="h-2.5 rounded-full transition-all" style={{ width: `${progresso}%`, background: "linear-gradient(90deg, #d63384, #7c3aed)" }} />
-            </div>
-            <p className="text-xs text-[#c4a0b5]">{progresso}% completo</p>
-          </Card>
-
-          {grupos.map(grupo => (
-            <div key={grupo}>
-              <p className="text-xs font-bold text-[#c4a0b5] uppercase tracking-wider mb-2">{grupo}</p>
-              <div className="space-y-2">
-                {CHECKLIST_ONBOARDING.filter(i => i.grupo === grupo).map(item => {
-                  const feito = checklist.includes(item.id);
-                  return (
-                    <button key={item.id} onClick={() => toggleCheck(item.id)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${feito ? "border-[#d6338440] bg-[#d6338408]" : "border-[#fde8f0] bg-white"}`}>
-                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${feito ? "border-[#d63384] bg-[#d63384]" : "border-[#fde8f0]"}`}>
-                        {feito && <span className="text-white text-xs font-bold">✓</span>}
-                      </div>
-                      <span className={`text-sm ${feito ? "line-through text-[#c4a0b5]" : "text-[#2d1b2e]"}`}>{item.texto}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-
-          <Card className="bg-[#fff0f5]">
-            <h3 className="text-sm font-bold text-[#d63384] mb-2">Sua Vantagem como Nano Influencer</h3>
-            <div className="space-y-2 text-xs text-[#9b7090]">
-              {[
-                "Engajamento de 5–8% (mega influencers têm 1–2%) — sua audiência CONFIA em você",
-                "Produtos indicados por você têm mais conversão que influencers grandes",
-                "Marcas valorizam nano influencers pelo baixo custo e alta autenticidade",
-                "Shopee e Amazon aprovam nano influencers sem complicação",
-              ].map((d, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="text-[#d63384] flex-shrink-0">✦</span>
-                  <span>{d}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <h3 className="text-sm font-bold text-[#2d1b2e] mb-3">Ângulo Estratégico: Glow Up Completo</h3>
-            <p className="text-xs text-[#9b7090] mb-3">
-              Com 3 nichos e pouco tempo, o segredo é uma <span className="font-bold text-[#d63384]">narrativa única</span> que conecta tudo:
-              beleza, moda e fitness como pilares da <span className="font-bold">transformação pessoal</span>.
-            </p>
-            <div className="space-y-2">
-              {[
-                { icon: "💄", titulo: "Beleza", desc: "Skincare, maquiagem e cuidados que fazem diferença" },
-                { icon: "👗", titulo: "Moda", desc: "Looks acessíveis que valorizam qualquer corpo" },
-                { icon: "💪", titulo: "Fitness", desc: "Treino + produtos que potencializam resultados" },
-              ].map(p => (
-                <div key={p.titulo} className="flex items-start gap-3 bg-[#fff8fa] rounded-xl p-3">
-                  <span className="text-xl">{p.icon}</span>
-                  <div>
-                    <p className="text-sm font-bold text-[#2d1b2e]">{p.titulo}</p>
-                    <p className="text-xs text-[#c4a0b5]">{p.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* ── ABA: PROGRAMAS ── */}
-      {aba === "programas" && (
-        <div className="space-y-3">
-          <Card className="bg-[#fff0f5]">
-            <p className="text-xs text-[#9b7090]">
-              <span className="font-bold text-[#d63384]">Estratégia:</span> Comece pelo Shopee (aprovação imediata) + Amazon. Só avance para Hotmart após gerar as primeiras vendas.
-            </p>
-          </Card>
-
-          {PROGRAMAS.map((prog, idx) => {
-            const aberto = programaAberto === prog.id;
-            return (
-              <Card key={prog.id}>
-                <button className="w-full flex items-center justify-between" onClick={() => setProgramaAberto(aberto ? null : prog.id)}>
-                  <div className="flex items-center gap-3 text-left">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0"
-                      style={{ background: prog.cor + "18", color: prog.cor }}>{idx + 1}</div>
-                    <div>
-                      <p className="text-sm font-bold text-[#2d1b2e]">{prog.nome}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs font-bold" style={{ color: prog.cor }}>{prog.comissao}</span>
-                        <span className="text-xs text-[#c4a0b5]">· {prog.dificuldade}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: prog.cor + "18", color: prog.cor }}>{prog.categoria}</span>
-                    <span className="text-[#d4b8c8] text-xs">{aberto ? "▲" : "▼"}</span>
-                  </div>
-                </button>
-
-                {aberto && (
-                  <div className="mt-3 border-t border-[#fde8f0] pt-3 space-y-3">
-                    <div className="bg-[#fff8fa] rounded-xl p-3">
-                      <p className="text-xs font-bold text-[#d63384] mb-1">{prog.inicio}</p>
-                      <p className="text-xs text-[#c4a0b5]">Prazo: {prog.prazo}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-[#c4a0b5] mb-1.5">Como cadastrar:</p>
-                      <div className="space-y-1.5">
-                        {prog.passos.map((p, i) => (
-                          <div key={i} className="flex items-start gap-2 text-xs text-[#6b4e5e]">
-                            <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                              style={{ background: prog.cor + "18", color: prog.cor }}>{i + 1}</span>
-                            {p}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-[#c4a0b5] mb-1.5">Vantagens:</p>
-                      <div className="space-y-1">
-                        {prog.pros.map((p, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs text-[#9b7090]">
-                            <span style={{ color: prog.cor }}>✓</span>{p}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {prog.nichos.map(n => (
-                        <span key={n} className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ background: (nichoColor[n] || "#d63384") + "18", color: nichoColor[n] || "#d63384" }}>{n}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-
-          <Card className="bg-[#fff8fa]">
-            <h3 className="text-sm font-bold text-[#2d1b2e] mb-2">Ferramentas Essenciais</h3>
-            <div className="space-y-2 text-xs text-[#9b7090]">
-              {[
-                { nome: "Beacons.ai ou Linktree", desc: "Link na bio que centraliza todos os afiliados" },
-                { nome: "Canva", desc: "Criar capas de Pin para o Pinterest (grátis)" },
-                { nome: "CapCut", desc: "Editar TikToks com legendas automáticas" },
-                { nome: "Notion / Planilha", desc: "Controle de links, comissões e conteúdo" },
-              ].map(f => (
-                <div key={f.nome} className="flex items-start gap-2 bg-white rounded-xl p-2.5 border border-[#fde8f0]">
-                  <span className="text-[#d63384] flex-shrink-0">→</span>
-                  <div>
-                    <span className="font-bold text-[#2d1b2e]">{f.nome}: </span>
-                    <span>{f.desc}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* ── ABA: CALENDÁRIO ── */}
-      {aba === "calendario" && (
-        <div className="space-y-3">
-          <Card className="bg-[#fff0f5]">
-            <p className="text-xs text-[#9b7090]">
-              <span className="font-bold text-[#d63384]">Regra de ouro:</span> 1 TikTok/dia + 3–5 pins/dia no Pinterest. Com 1–2h você consegue criar, editar e postar tudo.
-            </p>
-          </Card>
-
-          {CALENDARIO.map(dia => {
-            const aberto = diaAberto === dia.dia;
-            const cor = nichoColor[dia.nicho] || "#d63384";
-            return (
-              <Card key={dia.dia}>
-                <button className="w-full flex items-center justify-between" onClick={() => setDiaAberto(aberto ? null : dia.dia)}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black flex-shrink-0"
-                      style={{ background: cor + "18", color: cor }}>{dia.dia}</div>
-                    <div className="text-left">
-                      <p className="text-sm font-bold text-[#2d1b2e]">{dia.tema}</p>
-                      <p className="text-xs text-[#c4a0b5]">{dia.formato}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {dia.nicho !== "—" && (
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-                        style={{ background: cor + "18", color: cor }}>{dia.nicho}</span>
-                    )}
-                    <span className="text-[#d4b8c8] text-xs">{aberto ? "▲" : "▼"}</span>
-                  </div>
-                </button>
-
-                {aberto && (
-                  <div className="mt-3 border-t border-[#fde8f0] pt-3 space-y-2.5">
-                    <div className="bg-[#fff8fa] rounded-xl p-3">
-                      <p className="text-xs font-bold text-[#c4a0b5] mb-1">Hook sugerido:</p>
-                      <p className="text-sm font-medium text-[#2d1b2e]">{dia.hook}</p>
-                    </div>
-                    {dia.programas.length > 0 && (
-                      <div>
-                        <p className="text-xs font-bold text-[#c4a0b5] mb-1.5">Programas para usar:</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {dia.programas.map(p => (
-                            <span key={p} className="text-xs font-bold px-2.5 py-1 rounded-full bg-[#fde8f0] text-[#d63384]">{p}</span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {dia.dia === "Dom" && (
-                      <div className="text-xs text-[#9b7090] space-y-1">
-                        <p className="font-bold text-[#2d1b2e]">Tarefas do domingo:</p>
-                        {["Listar 5–10 produtos para promover na semana", "Gerar todos os links com antecedência", "Salvar os links no Linktree/Beacons", "Gravar 2–3 TikToks em lote (se possível)"].map((t, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="text-[#d63384]">•</span>{t}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-
-          <Card>
-            <h3 className="text-sm font-bold text-[#2d1b2e] mb-3">Formato dos TikToks que Convertem</h3>
-            <div className="space-y-2 text-xs text-[#9b7090]">
-              {[
-                { passo: "0–3s", desc: "Hook forte: \"Nunca mais comprei errado de beleza...\"" },
-                { passo: "3–15s", desc: "Problema + solução: mostre o produto em uso" },
-                { passo: "15–30s", desc: "Resultado: antes/depois ou reação genuína" },
-                { passo: "30–45s", desc: "CTA: \"Link na bio pra pegar o meu!\"" },
-              ].map(f => (
-                <div key={f.passo} className="flex items-start gap-3 bg-[#fff8fa] rounded-xl p-2.5">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#d6338418] text-[#d63384] flex-shrink-0">{f.passo}</span>
-                  <span>{f.desc}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* ── ABA: PROJEÇÃO DE RECEITA ── */}
-      {aba === "projecao" && (
-        <div className="space-y-3">
-          <Card className="bg-[#fff0f5]">
-            <p className="text-xs text-[#9b7090]">
-              Projeção conservadora baseada em nano influencer (até 10k) com TikTok + Pinterest, 1–2h/dia, consistência diária.
-            </p>
-          </Card>
-
-          {PROJECAO.map(m => {
-            const largura = Math.min(100, (m.max / 5000) * 100);
-            return (
-              <Card key={m.mes}>
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <span className="text-sm font-bold text-[#2d1b2e]">{m.mes}</span>
-                    <span className="text-xs text-[#c4a0b5] ml-2">· {m.fase}</span>
-                  </div>
-                  <span className="text-sm font-black text-[#d63384]">R${m.min}–R${m.max}</span>
-                </div>
-                <div className="w-full bg-[#fde8f0] rounded-full h-2 mb-2">
-                  <div className="h-2 rounded-full transition-all"
-                    style={{ width: `${largura}%`, background: "linear-gradient(90deg, #d63384, #7c3aed)" }} />
-                </div>
-                <p className="text-xs text-[#c4a0b5]">{m.foco}</p>
-              </Card>
-            );
-          })}
-
-          <Card>
-            <h3 className="text-sm font-bold text-[#2d1b2e] mb-3">Como Chegar em R$5.000/mês</h3>
-            <div className="space-y-2 text-xs text-[#9b7090]">
-              {[
-                { icon: "1", titulo: "Consistência (meses 1–3)", desc: "Postar diariamente, mesmo que imperfeito. Volume cria algoritmo." },
-                { icon: "2", titulo: "Pinterest Evergreen (mês 3+)", desc: "Pins bem otimizados trazem tráfego 12–18 meses. É renda passiva real." },
-                { icon: "3", titulo: "Hotmart de Alto Ticket (mês 4+)", desc: "1 curso de R$497 = R$200+ de comissão. 25 vendas/mês = R$5.000." },
-                { icon: "4", titulo: "Parcerias Fixas (mês 6+)", desc: "Marcas que pagam mensalmente por posts. Mais previsível que comissão." },
-              ].map(e => (
-                <div key={e.icon} className="flex items-start gap-3 bg-[#fff8fa] rounded-xl p-3 border border-[#fde8f0]">
-                  <span className="w-6 h-6 rounded-full bg-[#d6338418] text-[#d63384] flex items-center justify-center text-xs font-black flex-shrink-0">{e.icon}</span>
-                  <div>
-                    <p className="font-bold text-[#2d1b2e] mb-0.5">{e.titulo}</p>
-                    <p>{e.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card className="bg-[#fff0f5]">
-            <h3 className="text-sm font-bold text-[#d63384] mb-2">Simulação Realista — Mês 3</h3>
-            <div className="space-y-1.5 text-xs text-[#9b7090]">
-              {[
-                { fonte: "Shopee (50 cliques/dia × 3% conv. × R$15 ticket × 8%)", val: "R$180" },
-                { fonte: "Amazon (30 cliques/dia × 2% conv. × R$80 ticket × 5%)", val: "R$144" },
-                { fonte: "Pinterest (tráfego passivo acumulado)", val: "R$80" },
-                { fonte: "Hotmart (2 vendas × R$100 comissão)", val: "R$200" },
-              ].map(s => (
-                <div key={s.fonte} className="flex justify-between items-start gap-2 bg-white rounded-lg p-2 border border-[#fde8f0]">
-                  <span className="flex-1">{s.fonte}</span>
-                  <span className="font-bold text-[#059669] flex-shrink-0">{s.val}</span>
-                </div>
-              ))}
-              <div className="flex justify-between items-center bg-[#d6338418] rounded-lg p-2 mt-1">
-                <span className="font-bold text-[#2d1b2e]">Total estimado</span>
-                <span className="font-black text-[#d63384]">≈ R$604/mês</span>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* ── ABA: PINTEREST ── */}
-      {aba === "pinterest" && (
-        <div className="space-y-4">
-
-          {/* Cabeçalho Pinterest */}
-          <Card style={{ background: "linear-gradient(135deg, #e6002308, #e6002314)", borderColor: "#e6002330" }}>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                style={{ background: "#e60023", color: "white" }}>P</div>
-              <div>
-                <p className="text-sm font-bold text-[#2d1b2e]">Pinterest como Motor de Renda Passiva</p>
-                <p className="text-xs text-[#c4a0b5]">Tráfego evergreen · SEO visual · 12–18 meses de vida útil</p>
-              </div>
-            </div>
-            <p className="text-xs text-[#9b7090]">
-              Diferente do TikTok (vida útil de 24h), um Pin otimizado continua gerando cliques e comissões por <span className="font-bold text-[#e60023]">1 a 2 anos</span>. É a única plataforma onde o esforço de hoje gera renda em 2027.
-            </p>
-          </Card>
-
-          {/* Dados históricos */}
-          <div>
-            <p className="text-xs font-bold text-[#c4a0b5] uppercase tracking-wider mb-2">Dados & Estatísticas Reais</p>
-            <div className="grid grid-cols-2 gap-2">
-              {PINTEREST_STATS.map((s, i) => (
-                <Card key={i} className="p-3">
-                  <div className="text-xl font-black mb-0.5" style={{ color: s.cor }}>{s.valor}</div>
-                  <p className="text-xs text-[#2d1b2e] leading-tight mb-1">{s.desc}</p>
-                  <p className="text-[10px] text-[#d4b8c8]">{s.fonte}</p>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Casos reais */}
-          <div>
-            <p className="text-xs font-bold text-[#c4a0b5] uppercase tracking-wider mb-2">Casos Reais de Resultado</p>
-            <div className="space-y-3">
-              {PINTEREST_CASOS.map((c, i) => (
-                <Card key={i}>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
-                      <p className="text-sm font-bold text-[#2d1b2e]">{c.titulo}</p>
-                      <p className="text-[10px] text-[#c4a0b5] mt-0.5">{c.fonte}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-black" style={{ color: c.cor }}>{c.resultado}</p>
-                      <p className="text-[10px] text-[#c4a0b5]">{c.prazo}</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-[#9b7090] leading-relaxed">{c.detalhe}</p>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Guia SEO passo a passo */}
-          <div>
-            <p className="text-xs font-bold text-[#c4a0b5] uppercase tracking-wider mb-2">Guia SEO do Pinterest</p>
-            <div className="space-y-2">
-              {PINTEREST_SEO.map((etapa) => {
-                const aberto = seoAberto === etapa.etapa;
-                return (
-                  <Card key={etapa.etapa}>
-                    <button className="w-full flex items-center justify-between" onClick={() => setSeoAberto(aberto ? null : etapa.etapa)}>
-                      <div className="flex items-center gap-3 text-left">
-                        <span className="text-xl">{etapa.icon}</span>
-                        <span className="text-sm font-bold text-[#2d1b2e]">{etapa.etapa}</span>
-                      </div>
-                      <span className="text-[#d4b8c8] text-xs flex-shrink-0">{aberto ? "▲" : "▼"}</span>
-                    </button>
-                    {aberto && (
-                      <div className="mt-3 border-t border-[#fde8f0] pt-3 space-y-2">
-                        {etapa.itens.map((item, i) => (
-                          <div key={i} className="flex items-start gap-2 text-xs text-[#6b4e5e]">
-                            <span className="text-[#e60023] flex-shrink-0 mt-0.5">•</span>
-                            <span>{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Banco de keywords */}
-          <div>
-            <p className="text-xs font-bold text-[#c4a0b5] uppercase tracking-wider mb-2">Banco de Palavras-Chave</p>
-            <div className="flex gap-2 mb-3">
-              {Object.keys(PINTEREST_KEYWORDS).map(n => (
-                <button key={n} onClick={() => setKwNicho(n)}
-                  className="flex-1 py-1.5 rounded-xl text-xs font-bold border-2 transition-all"
-                  style={kwNicho === n
-                    ? { borderColor: "#e60023", background: "#e6002314", color: "#e60023" }
-                    : { borderColor: "#fde8f0", background: "white", color: "#c4a0b5" }}>
-                  {n}
-                </button>
-              ))}
-            </div>
-            <Card>
-              <p className="text-xs text-[#c4a0b5] mb-2">Copie e use nos títulos e descrições dos seus Pins:</p>
-              <div className="flex flex-wrap gap-2">
-                {PINTEREST_KEYWORDS[kwNicho].map((kw, i) => (
-                  <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full"
-                    style={{ background: "#e6002310", color: "#e60023", border: "1px solid #e6002325" }}>
-                    {kw}
+      <div className="p-4 space-y-3">
+        {sub === "livros" && (
+          <>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex gap-1 flex-wrap">
+                {Object.entries(BOOK_STATUS).map(([s, c]) => (
+                  <span key={s} className="text-xs font-bold px-2 py-0.5 rounded-lg border border-black" style={{ backgroundColor: c + "33", color: c }}>
+                    {books.filter(b => b.status === s).length} {s.split(" ")[0]}
                   </span>
                 ))}
               </div>
-            </Card>
-          </div>
-
-          {/* Comparativo Pinterest vs TikTok */}
-          <Card>
-            <h3 className="text-sm font-bold text-[#2d1b2e] mb-3">Pinterest vs TikTok — Papel de Cada Um</h3>
-            <div className="space-y-2 text-xs">
-              {[
-                { plat: "TikTok", papel: "Descoberta rápida", vida: "24–48h", foco: "Volume, viralizar, novos seguidores", cor: "#2d1b2e" },
-                { plat: "Pinterest", papel: "Renda passiva", vida: "12–18 meses", foco: "SEO, tráfego contínuo, conversão", cor: "#e60023" },
-              ].map(p => (
-                <div key={p.plat} className="rounded-xl p-3 border border-[#fde8f0] bg-[#fff8fa]">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-black" style={{ color: p.cor }}>{p.plat}</span>
-                    <span className="text-[10px] text-[#c4a0b5]">vida do conteúdo: <b>{p.vida}</b></span>
+              <Btn small color={color} onClick={() => { setForm({}); setModal("book"); }}>+ Livro</Btn>
+            </div>
+            {books.length === 0 && <EmptyState emoji="📚" text="Nenhum livro ainda. Adicione um!" />}
+            {books.map(book => (
+              <Card key={book.id} accentColor={BOOK_STATUS[book.status]}>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm leading-tight">{book.title}</p>
+                    {book.author && <p className="text-xs text-gray-500">{book.author}</p>}
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <select value={book.status} onChange={e => saveBooks(books.map(b => b.id === book.id ? { ...b, status: e.target.value } : b))}
+                        className="text-xs border border-gray-300 rounded-lg px-1.5 py-0.5 bg-white">
+                        {Object.keys(BOOK_STATUS).map(s => <option key={s}>{s}</option>)}
+                      </select>
+                      <div className="flex">
+                        {[1,2,3,4,5].map(star => (
+                          <button key={star} onClick={() => saveBooks(books.map(b => b.id === book.id ? { ...b, rating: star } : b))}
+                            className={`text-base ${star <= book.rating ? "text-yellow-400" : "text-gray-200"}`}>★</button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-[#9b7090]"><span className="font-bold text-[#2d1b2e]">Papel: </span>{p.papel}</p>
-                  <p className="text-[#9b7090] mt-0.5">{p.foco}</p>
+                  <button onClick={() => saveBooks(books.filter(b => b.id !== book.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none mt-0.5">×</button>
                 </div>
-              ))}
-              <p className="text-[#9b7090] pt-1">
-                <span className="font-bold text-[#2d1b2e]">Sinergia ideal:</span> crie o TikTok hoje → salve o mesmo conteúdo como Pin no Pinterest → o TikTok viraliza agora, o Pin converte por 18 meses.
-              </p>
-            </div>
-          </Card>
+              </Card>
+            ))}
+          </>
+        )}
 
-          {/* Checklist de início no Pinterest */}
-          <Card className="bg-[#fff0f5]">
-            <h3 className="text-sm font-bold text-[#e60023] mb-3">Checklist: Primeiros 7 Dias no Pinterest</h3>
-            <div className="space-y-1.5 text-xs text-[#9b7090]">
-              {[
-                "Dia 1: Criar conta comercial (Pinterest for Business) — gratuito",
-                "Dia 1: Otimizar bio, foto e URL (Linktree com links afiliados)",
-                "Dia 2: Criar 9 boards com nomes de palavras-chave longas",
-                "Dia 2–3: Criar 15 pins iniciais (5 por nicho) com links afiliados",
-                "Dia 4–7: Postar 3–5 pins novos por dia + repinar conteúdo relevante",
-                "Dia 7: Instalar Pinterest Tag no site/Linktree para rastrear conversões",
-              ].map((t, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="w-4 h-4 rounded-full bg-[#e6002318] text-[#e60023] flex items-center justify-center text-[10px] font-bold flex-shrink-0">{i + 1}</span>
-                  <span>{t}</span>
-                </div>
-              ))}
+        {sub === "cursos" && (
+          <>
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({}); setModal("course"); }}>+ Curso</Btn>
             </div>
-          </Card>
+            {courses.length === 0 && <EmptyState emoji="🎓" text="Nenhum curso ainda." />}
+            {courses.map(course => {
+              const done = course.modules.filter(m => m.done).length;
+              const pct = course.modules.length ? Math.round(done / course.modules.length * 100) : 0;
+              return (
+                <Card key={course.id} accentColor={color}>
+                  <div className="flex justify-between items-start mb-1">
+                    <div>
+                      <p className="font-bold">{course.title}</p>
+                      {course.platform && <p className="text-xs text-gray-500">{course.platform}</p>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black" style={{ color }}>{pct}%</span>
+                      <button onClick={() => saveCourses(courses.filter(c => c.id !== course.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                    </div>
+                  </div>
+                  {course.modules.length > 0 && (
+                    <div className="w-full bg-gray-100 rounded-full h-2 mb-3 overflow-hidden">
+                      <div className="h-2 rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
+                    </div>
+                  )}
+                  <div className="space-y-2 mb-3">
+                    {course.modules.map(mod => (
+                      <div key={mod.id} className="border border-gray-200 rounded-xl p-2">
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" checked={mod.done}
+                            onChange={() => saveCourses(courses.map(c => c.id === course.id ? { ...c, modules: c.modules.map(m => m.id === mod.id ? { ...m, done: !m.done } : m) } : c))}
+                            className="rounded cursor-pointer" />
+                          <span className={`text-sm flex-1 ${mod.done ? "line-through text-gray-400" : "font-medium"}`}>{mod.title}</span>
+                          <button onClick={() => saveCourses(courses.map(c => c.id === course.id ? { ...c, modules: c.modules.filter(m => m.id !== mod.id) } : c))}
+                            className="text-gray-200 hover:text-red-400 text-lg leading-none">×</button>
+                        </div>
+                        <textarea className="mt-1 w-full text-xs border border-gray-100 rounded-lg px-2 py-1 resize-none focus:outline-none focus:border-gray-300"
+                          placeholder="Notas..." rows={mod.notes ? 2 : 1} value={mod.notes}
+                          onChange={e => saveCourses(courses.map(c => c.id === course.id ? { ...c, modules: c.modules.map(m => m.id === mod.id ? { ...m, notes: e.target.value } : m) } : c))} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input className="flex-1 border border-gray-200 rounded-xl px-3 py-1.5 text-xs focus:outline-none"
+                      placeholder="Nova aula/módulo..."
+                      value={modInput[course.id] || ""}
+                      onChange={e => setModInput(p => ({ ...p, [course.id]: e.target.value }))}
+                      onKeyDown={e => e.key === "Enter" && addModule(course.id)} />
+                    <Btn small color={color} onClick={() => addModule(course.id)}>+</Btn>
+                  </div>
+                </Card>
+              );
+            })}
+          </>
+        )}
+      </div>
 
-        </div>
-      )}
+      <Modal open={modal === "book"} onClose={() => setModal(null)} title="📖 Novo Livro" color={color}>
+        <Inp label="Título *" value={form.title || ""} onChange={f("title")} placeholder="Ex: Sapiens" />
+        <Inp label="Autor" value={form.author || ""} onChange={f("author")} placeholder="Ex: Yuval Noah Harari" />
+        <Btn color={color} className="w-full" onClick={addBook}>Adicionar livro</Btn>
+      </Modal>
+
+      <Modal open={modal === "course"} onClose={() => setModal(null)} title="🎓 Novo Curso" color={color}>
+        <Inp label="Nome do curso *" value={form.title || ""} onChange={f("title")} placeholder="Ex: UX Design na prática" />
+        <Inp label="Plataforma" value={form.platform || ""} onChange={f("platform")} placeholder="Ex: Udemy, YouTube, Alura" />
+        <Btn color={color} className="w-full" onClick={addCourse}>Adicionar curso</Btn>
+      </Modal>
     </div>
   );
 }
 
-/* ─── App ─── */
-const PAGES = [
-  { id: "home", label: "Início", icon: "🏠" },
-  { id: "treino", label: "Treino", icon: "💪" },
-  { id: "dieta", label: "Dieta", icon: "🥗" },
-  { id: "afiliadas", label: "Afiliadas", icon: "💰" },
-];
+/* ─── TRABALHO ──────────────────────────────────────────────────────────────── */
+const TASK_STATUS_COLOR = { "Pendente": "#FFD166", "Em andamento": "#4361EE", "Concluído": "#52B788" };
+const PRIORITY_COLOR = { "Alta": "#E63946", "Média": "#FF9500", "Baixa": "#52B788" };
 
-export default function App() {
-  const [page, setPage] = useState("home");
+function TrabalhoTab() {
+  const [sub, setSub] = useState("tarefas");
+  const [tasks, setTasks] = useState(() => db.get("orbit_tasks", []));
+  const [goals, setGoals] = useState(() => db.get("orbit_career", []));
+  const [ideas, setIdeas] = useState(() => db.get("orbit_ideas", []));
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const color = "#52B788";
+  const tab = TABS.find(t => t.id === "trabalho");
+  const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  const saveTasks = t => { setTasks(t); db.set("orbit_tasks", t); };
+  const saveGoals = g => { setGoals(g); db.set("orbit_career", g); };
+  const saveIdeas = i => { setIdeas(i); db.set("orbit_ideas", i); };
+
   return (
-    <div className="min-h-screen bg-[#fff8fa] text-[#2d1b2e] max-w-md mx-auto relative">
-      <div className="pb-20 min-h-screen overflow-y-auto">
-        {page === "home"       && <Home setPage={setPage} />}
-        {page === "treino"     && <Treino />}
-        {page === "dieta"      && <Dieta />}
-        {page === "afiliadas"  && <Afiliadas />}
+    <div>
+      <TabHeader tab={tab} subtitle={`${tasks.filter(t => t.status !== "Concluído").length} tarefas abertas`} />
+      <SubTabs tabs={[["tarefas","✅ Tarefas"],["metas","🎯 Metas"],["ideias","💡 Ideias"]]} active={sub} setActive={setSub} color={color} />
+
+      <div className="p-4 space-y-3">
+        {sub === "tarefas" && (
+          <>
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({ priority: "Média", status: "Pendente" }); setModal("task"); }}>+ Tarefa</Btn>
+            </div>
+            {tasks.length === 0 && <EmptyState emoji="✅" text="Nenhuma tarefa! Que luxo." />}
+            {tasks.map(task => (
+              <Card key={task.id} accentColor={TASK_STATUS_COLOR[task.status]}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-bold text-sm ${task.status === "Concluído" ? "line-through text-gray-400" : ""}`}>{task.title}</p>
+                    {task.project && <p className="text-xs text-gray-500">📁 {task.project}</p>}
+                    <div className="flex gap-2 mt-1.5 flex-wrap items-center">
+                      <select value={task.status} onChange={e => saveTasks(tasks.map(t => t.id === task.id ? { ...t, status: e.target.value } : t))}
+                        className="text-xs border border-gray-300 rounded-lg px-1.5 py-0.5 bg-white">
+                        {Object.keys(TASK_STATUS_COLOR).map(s => <option key={s}>{s}</option>)}
+                      </select>
+                      <Badge color={PRIORITY_COLOR[task.priority]}>{task.priority}</Badge>
+                      {task.dueDate && <span className="text-xs text-gray-400">📅 {fmtDate(task.dueDate)}</span>}
+                    </div>
+                  </div>
+                  <button onClick={() => saveTasks(tasks.filter(t => t.id !== task.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                </div>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {sub === "metas" && (
+          <>
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({}); setModal("goal"); }}>+ Meta</Btn>
+            </div>
+            {goals.length === 0 && <EmptyState emoji="🎯" text="Nenhuma meta de carreira ainda." />}
+            {goals.map(g => (
+              <Card key={g.id} accentColor={color}>
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <p className="font-bold text-sm">{g.title}</p>
+                    {g.timeframe && <p className="text-xs text-gray-500 mt-0.5">⏱ {g.timeframe}</p>}
+                    {g.notes && <p className="text-xs text-gray-600 mt-1">{g.notes}</p>}
+                    <div className="mt-1.5">
+                      <select value={g.status} onChange={e => saveGoals(goals.map(x => x.id === g.id ? { ...x, status: e.target.value } : x))}
+                        className="text-xs border border-gray-300 rounded-lg px-1.5 py-0.5 bg-white">
+                        <option>Em andamento</option><option>Concluído</option><option>Pausado</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button onClick={() => saveGoals(goals.filter(x => x.id !== g.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                </div>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {sub === "ideias" && (
+          <>
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({}); setModal("idea"); }}>+ Ideia</Btn>
+            </div>
+            {ideas.length === 0 && <EmptyState emoji="💡" text="Nenhuma ideia registrada ainda." />}
+            {ideas.map(idea => (
+              <Card key={idea.id} accentColor={color}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-bold text-sm">{idea.title}</p>
+                    {idea.content && <p className="text-xs text-gray-600 mt-1">{idea.content}</p>}
+                    <p className="text-xs text-gray-400 mt-1">{fmtDate(idea.date)}</p>
+                  </div>
+                  <button onClick={() => saveIdeas(ideas.filter(i => i.id !== idea.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                </div>
+              </Card>
+            ))}
+          </>
+        )}
       </div>
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-[#fde8f0] z-40 shadow-[0_-4px_20px_rgba(214,51,132,0.08)]">
-        <div className="flex">
-          {PAGES.map(p => (
-            <button key={p.id} onClick={() => setPage(p.id)}
-              className={`flex-1 flex flex-col items-center gap-1 py-3 relative transition-all ${page === p.id ? "text-[#d63384]" : "text-[#d4b8c8]"}`}>
-              <span className="text-xl">{p.icon}</span>
-              <span className="text-[10px] font-medium">{p.label}</span>
-              {page === p.id && <div className="absolute bottom-0 w-6 h-0.5 bg-[#d63384] rounded-full" />}
+
+      <Modal open={modal === "task"} onClose={() => setModal(null)} title="✅ Nova Tarefa" color={color}>
+        <Inp label="Tarefa *" value={form.title || ""} onChange={f("title")} placeholder="O que precisa ser feito?" />
+        <Inp label="Projeto" value={form.project || ""} onChange={f("project")} placeholder="Ex: Redesign do app" />
+        <Sel label="Prioridade" value={form.priority || "Média"} onChange={f("priority")}>
+          <option>Alta</option><option>Média</option><option>Baixa</option>
+        </Sel>
+        <Inp label="Prazo" type="date" value={form.dueDate || ""} onChange={f("dueDate")} />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.title) return;
+          saveTasks([...tasks, { id: uid(), title: form.title, project: form.project || "", status: "Pendente", priority: form.priority || "Média", dueDate: form.dueDate || "" }]);
+          setModal(null); setForm({});
+        }}>Adicionar tarefa</Btn>
+      </Modal>
+
+      <Modal open={modal === "goal"} onClose={() => setModal(null)} title="🎯 Nova Meta de Carreira" color={color}>
+        <Inp label="Meta *" value={form.title || ""} onChange={f("title")} placeholder="Ex: Ser promovida até dez/25" />
+        <Inp label="Prazo" value={form.timeframe || ""} onChange={f("timeframe")} placeholder="Ex: 6 meses, Q4 2025" />
+        <Tex label="Notas" value={form.notes || ""} onChange={f("notes")} placeholder="Detalhes..." />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.title) return;
+          saveGoals([...goals, { id: uid(), title: form.title, timeframe: form.timeframe || "", status: "Em andamento", notes: form.notes || "" }]);
+          setModal(null); setForm({});
+        }}>Adicionar meta</Btn>
+      </Modal>
+
+      <Modal open={modal === "idea"} onClose={() => setModal(null)} title="💡 Nova Ideia" color={color}>
+        <Inp label="Título *" value={form.title || ""} onChange={f("title")} placeholder="Nome da ideia" />
+        <Tex label="Detalhe" value={form.content || ""} onChange={f("content")} placeholder="Descreva a ideia..." />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.title) return;
+          saveIdeas([...ideas, { id: uid(), title: form.title, content: form.content || "", date: today() }]);
+          setModal(null); setForm({});
+        }}>Salvar ideia</Btn>
+      </Modal>
+    </div>
+  );
+}
+
+/* ─── VIDA ──────────────────────────────────────────────────────────────────── */
+const MOOD_EMOJIS = ["😢","😟","😐","🙂","😄"];
+const MOOD_LABELS = ["Muito ruim","Ruim","Ok","Bom","Ótimo"];
+const TRAVEL_STATUS_COLOR = { "Sonho": "#9B5DE5", "Planejando": "#4361EE", "Confirmado": "#52B788", "Feito": "#FFD166" };
+
+function VidaTab() {
+  const [sub, setSub] = useState("habitos");
+  const [habits, setHabits] = useState(() => db.get("orbit_habits", []));
+  const [habitLogs, setHabitLogs] = useState(() => db.get("orbit_habit_logs", {}));
+  const [lifeGoals, setLifeGoals] = useState(() => db.get("orbit_life_goals", []));
+  const [travels, setTravels] = useState(() => db.get("orbit_travels", []));
+  const [moods, setMoods] = useState(() => db.get("orbit_moods", []));
+  const [appointments, setAppointments] = useState(() => db.get("orbit_appointments", []));
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const color = "#FF6B9D";
+  const tab = TABS.find(t => t.id === "vida");
+  const td = today();
+  const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  const saveHabits = h => { setHabits(h); db.set("orbit_habits", h); };
+  const saveHabitLogs = l => { setHabitLogs(l); db.set("orbit_habit_logs", l); };
+  const saveLifeGoals = g => { setLifeGoals(g); db.set("orbit_life_goals", g); };
+  const saveTravels = t => { setTravels(t); db.set("orbit_travels", t); };
+  const saveMoods = m => { setMoods(m); db.set("orbit_moods", m); };
+  const saveAppointments = a => { setAppointments(a); db.set("orbit_appointments", a); };
+
+  const todayDone = habitLogs[td] || [];
+  const habitPct = habits.length ? Math.round(todayDone.length / habits.length * 100) : 0;
+  const todayMood = moods.find(m => m.date === td);
+
+  const toggleHabit = id => {
+    const logs = { ...habitLogs };
+    if (!logs[td]) logs[td] = [];
+    logs[td] = logs[td].includes(id) ? logs[td].filter(h => h !== id) : [...logs[td], id];
+    saveHabitLogs(logs);
+  };
+
+  return (
+    <div>
+      <TabHeader tab={tab} subtitle={habits.length ? `${habitPct}% dos hábitos hoje` : "Vida & bem-estar"} />
+      <SubTabs
+        tabs={[["habitos","🌱 Hábitos"],["objetivos","🌟 Objetivos"],["viagens","✈️ Viagens"],["bemestar","💆 Bem-estar"],["consultas","🩺 Consultas"]]}
+        active={sub} setActive={setSub} color={color} />
+
+      <div className="p-4 space-y-3">
+        {sub === "habitos" && (
+          <>
+            {habits.length > 0 && (
+              <Card>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-bold text-sm">{new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}</p>
+                  <span className="font-black text-2xl" style={{ color }}>{habitPct}%</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                  <div className="h-3 rounded-full transition-all duration-500" style={{ width: `${habitPct}%`, backgroundColor: color }} />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">{todayDone.length} de {habits.length} concluídos</p>
+              </Card>
+            )}
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({ emoji: "" }); setModal("habit"); }}>+ Hábito</Btn>
+            </div>
+            {habits.length === 0 && <EmptyState emoji="🌱" text="Adicione seus hábitos diários!" />}
+            {habits.map(h => {
+              const done = todayDone.includes(h.id);
+              return (
+                <button key={h.id} onClick={() => toggleHabit(h.id)} className="w-full text-left">
+                  <Card accentColor={done ? color : "#e5e7eb"} className="transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl border-2 border-black flex items-center justify-center text-lg flex-shrink-0"
+                        style={{ backgroundColor: done ? color : "white" }}>
+                        {done ? <span className="text-white font-black text-base">✓</span> : <span>{h.emoji || "✦"}</span>}
+                      </div>
+                      <span className={`font-bold text-sm flex-1 ${done ? "line-through text-gray-400" : ""}`}>{h.name}</span>
+                      <button onClick={e => { e.stopPropagation(); saveHabits(habits.filter(x => x.id !== h.id)); }}
+                        className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                    </div>
+                  </Card>
+                </button>
+              );
+            })}
+          </>
+        )}
+
+        {sub === "objetivos" && (
+          <>
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({}); setModal("lifegoal"); }}>+ Objetivo</Btn>
+            </div>
+            {lifeGoals.length === 0 && <EmptyState emoji="🌟" text="Nenhum objetivo ainda." />}
+            {lifeGoals.map(g => (
+              <Card key={g.id} accentColor={color}>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1">
+                    <p className="font-bold text-sm">{g.title}</p>
+                    <div className="flex gap-2 mt-1 flex-wrap items-center">
+                      {g.category && <Badge color={color}>{g.category}</Badge>}
+                      {g.timeframe && <span className="text-xs text-gray-500">{g.timeframe}</span>}
+                    </div>
+                    <select value={g.status} onChange={e => saveLifeGoals(lifeGoals.map(x => x.id === g.id ? { ...x, status: e.target.value } : x))}
+                      className="mt-1.5 text-xs border border-gray-300 rounded-lg px-1.5 py-0.5 bg-white">
+                      <option>Em andamento</option><option>Concluído</option><option>Pausado</option>
+                    </select>
+                  </div>
+                  <button onClick={() => saveLifeGoals(lifeGoals.filter(x => x.id !== g.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                </div>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {sub === "viagens" && (
+          <>
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({ status: "Sonho" }); setModal("travel"); }}>+ Destino</Btn>
+            </div>
+            {travels.length === 0 && <EmptyState emoji="✈️" text="Sua bucket list de viagens!" />}
+            {travels.map(t => (
+              <Card key={t.id} accentColor={TRAVEL_STATUS_COLOR[t.status]}>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex-1">
+                    <p className="font-bold">{t.destination}</p>
+                    <div className="flex gap-2 mt-1 flex-wrap items-center">
+                      <select value={t.status} onChange={e => saveTravels(travels.map(x => x.id === t.id ? { ...x, status: e.target.value } : x))}
+                        className="text-xs border border-gray-300 rounded-lg px-1.5 py-0.5 bg-white">
+                        {Object.keys(TRAVEL_STATUS_COLOR).map(s => <option key={s}>{s}</option>)}
+                      </select>
+                      {t.date && <span className="text-xs text-gray-500">{fmtDate(t.date)}</span>}
+                    </div>
+                    {t.notes && <p className="text-xs text-gray-500 mt-1">{t.notes}</p>}
+                  </div>
+                  <button onClick={() => saveTravels(travels.filter(x => x.id !== t.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                </div>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {sub === "bemestar" && (
+          <>
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({ mood: todayMood?.mood || 3, notes: todayMood?.notes || "" }); setModal("mood"); }}>
+                {todayMood ? "✏️ Editar humor" : "+ Humor hoje"}
+              </Btn>
+            </div>
+            {todayMood && (
+              <Card accentColor={color}>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Hoje</p>
+                <p className="text-3xl">{MOOD_EMOJIS[todayMood.mood - 1]}</p>
+                <p className="font-bold" style={{ color }}>{MOOD_LABELS[todayMood.mood - 1]}</p>
+                {todayMood.notes && <p className="text-xs text-gray-600 mt-1">{todayMood.notes}</p>}
+              </Card>
+            )}
+            {!todayMood && <EmptyState emoji="💆" text="Como você está hoje?" />}
+            <div className="space-y-2">
+              {moods.filter(m => m.date !== td).slice(0, 14).map(m => (
+                <div key={m.id} className="flex items-center gap-3 px-3 py-2 bg-white rounded-xl border-2 border-gray-100">
+                  <span className="text-xs text-gray-400 w-20 flex-shrink-0">{fmtDate(m.date)}</span>
+                  <span className="text-lg">{MOOD_EMOJIS[m.mood - 1]}</span>
+                  <span className="text-xs font-medium">{MOOD_LABELS[m.mood - 1]}</span>
+                  {m.notes && <span className="text-xs text-gray-400 truncate flex-1">{m.notes}</span>}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {sub === "consultas" && (
+          <>
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({}); setModal("appt"); }}>+ Consulta</Btn>
+            </div>
+            {appointments.length === 0 && <EmptyState emoji="🩺" text="Nenhuma consulta registrada." />}
+            {[...appointments].sort((a, b) => (a.date || "").localeCompare(b.date || "")).map(a => (
+              <Card key={a.id} accentColor={color}>
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <p className="font-bold text-sm">{a.doctor}</p>
+                    {a.specialty && <Badge color={color}>{a.specialty}</Badge>}
+                    {a.date && <p className="text-xs text-gray-500 mt-1">📅 {fmtDate(a.date)}</p>}
+                    {a.notes && <p className="text-xs text-gray-600 mt-1">{a.notes}</p>}
+                  </div>
+                  <button onClick={() => saveAppointments(appointments.filter(x => x.id !== a.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                </div>
+              </Card>
+            ))}
+          </>
+        )}
+      </div>
+
+      <Modal open={modal === "habit"} onClose={() => setModal(null)} title="🌱 Novo Hábito" color={color}>
+        <Inp label="Nome *" value={form.name || ""} onChange={f("name")} placeholder="Ex: Beber 2L de água" />
+        <Inp label="Emoji" value={form.emoji || ""} onChange={f("emoji")} placeholder="💧" maxLength={2} />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.name) return;
+          saveHabits([...habits, { id: uid(), name: form.name, emoji: form.emoji || "✦" }]);
+          setModal(null); setForm({});
+        }}>Adicionar hábito</Btn>
+      </Modal>
+
+      <Modal open={modal === "lifegoal"} onClose={() => setModal(null)} title="🌟 Novo Objetivo" color={color}>
+        <Inp label="Objetivo *" value={form.title || ""} onChange={f("title")} placeholder="Ex: Morar no exterior" />
+        <Inp label="Categoria" value={form.category || ""} onChange={f("category")} placeholder="Ex: Carreira, Pessoal, Família" />
+        <Inp label="Prazo" value={form.timeframe || ""} onChange={f("timeframe")} placeholder="Ex: 2026, próximos 5 anos" />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.title) return;
+          saveLifeGoals([...lifeGoals, { id: uid(), title: form.title, category: form.category || "Pessoal", timeframe: form.timeframe || "", status: "Em andamento" }]);
+          setModal(null); setForm({});
+        }}>Adicionar objetivo</Btn>
+      </Modal>
+
+      <Modal open={modal === "travel"} onClose={() => setModal(null)} title="✈️ Novo Destino" color={color}>
+        <Inp label="Destino *" value={form.destination || ""} onChange={f("destination")} placeholder="Ex: Tóquio, Japão" />
+        <Sel label="Status" value={form.status || "Sonho"} onChange={f("status")}>
+          {Object.keys(TRAVEL_STATUS_COLOR).map(s => <option key={s}>{s}</option>)}
+        </Sel>
+        <Inp label="Data prevista" type="date" value={form.date || ""} onChange={f("date")} />
+        <Tex label="Notas" value={form.notes || ""} onChange={f("notes")} placeholder="Planos, observações..." />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.destination) return;
+          saveTravels([...travels, { id: uid(), destination: form.destination, status: form.status || "Sonho", date: form.date || "", notes: form.notes || "" }]);
+          setModal(null); setForm({});
+        }}>Adicionar destino</Btn>
+      </Modal>
+
+      <Modal open={modal === "mood"} onClose={() => setModal(null)} title="💆 Como você está?" color={color}>
+        <div className="flex justify-between gap-1">
+          {MOOD_EMOJIS.map((em, i) => (
+            <button key={i} onClick={() => setForm(p => ({ ...p, mood: i + 1 }))}
+              className={`flex-1 py-3 rounded-xl border-2 text-2xl transition-all ${form.mood === i + 1 ? "border-black scale-110 bg-pink-50" : "border-gray-200"}`}>
+              {em}
             </button>
           ))}
+        </div>
+        {form.mood && <p className="text-center text-sm font-bold" style={{ color }}>{MOOD_LABELS[form.mood - 1]}</p>}
+        <Tex label="Notas (opcional)" value={form.notes || ""} onChange={f("notes")} placeholder="Como foi seu dia..." />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.mood) return;
+          saveMoods([{ id: uid(), date: td, mood: Number(form.mood), notes: form.notes || "" }, ...moods.filter(m => m.date !== td)]);
+          setModal(null); setForm({});
+        }}>Registrar humor</Btn>
+      </Modal>
+
+      <Modal open={modal === "appt"} onClose={() => setModal(null)} title="🩺 Nova Consulta" color={color}>
+        <Inp label="Médico/Profissional *" value={form.doctor || ""} onChange={f("doctor")} placeholder="Ex: Dra. Ana Lima" />
+        <Inp label="Especialidade" value={form.specialty || ""} onChange={f("specialty")} placeholder="Ex: Ginecologista" />
+        <Inp label="Data" type="date" value={form.date || ""} onChange={f("date")} />
+        <Tex label="Notas" value={form.notes || ""} onChange={f("notes")} placeholder="Observações, resultados..." />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.doctor) return;
+          saveAppointments([...appointments, { id: uid(), doctor: form.doctor, specialty: form.specialty || "", date: form.date || "", notes: form.notes || "" }]);
+          setModal(null); setForm({});
+        }}>Adicionar consulta</Btn>
+      </Modal>
+    </div>
+  );
+}
+
+/* ─── CASA ──────────────────────────────────────────────────────────────────── */
+const CLEAN_FREQ_COLOR = { "Diário": "#E63946", "Semanal": "#4361EE", "Quinzenal": "#9B5DE5", "Mensal": "#52B788" };
+
+function CasaTab() {
+  const [sub, setSub] = useState("limpeza");
+  const [cleaning, setCleaning] = useState(() => db.get("orbit_cleaning", []));
+  const [shopping, setShopping] = useState(() => db.get("orbit_shopping", []));
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [newItem, setNewItem] = useState("");
+  const color = "#B45309";
+  const tab = TABS.find(t => t.id === "casa");
+  const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  const saveCleaning = c => { setCleaning(c); db.set("orbit_cleaning", c); };
+  const saveShopping = s => { setShopping(s); db.set("orbit_shopping", s); };
+
+  const addShoppingItem = () => {
+    if (!newItem.trim()) return;
+    saveShopping([...shopping, { id: uid(), name: newItem.trim(), done: false }]);
+    setNewItem("");
+  };
+
+  return (
+    <div>
+      <TabHeader tab={tab} subtitle={`${shopping.filter(s => !s.done).length} itens na lista`} />
+      <SubTabs tabs={[["limpeza","🧹 Limpeza"],["compras","🛒 Compras"]]} active={sub} setActive={setSub} color={color} />
+
+      <div className="p-4 space-y-3">
+        {sub === "limpeza" && (
+          <>
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({ frequency: "Semanal" }); setModal("clean"); }}>+ Tarefa</Btn>
+            </div>
+            {cleaning.length === 0 && <EmptyState emoji="🧹" text="Nenhuma tarefa de limpeza cadastrada." />}
+            {cleaning.map(task => (
+              <Card key={task.id} accentColor={CLEAN_FREQ_COLOR[task.frequency]}>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="font-bold text-sm">{task.name}</p>
+                    <div className="flex gap-2 mt-1 items-center">
+                      <Badge color={CLEAN_FREQ_COLOR[task.frequency]}>{task.frequency}</Badge>
+                      {task.lastDone && <span className="text-xs text-gray-400">Última: {fmtDate(task.lastDone)}</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 items-center flex-shrink-0">
+                    <Btn small color={color} onClick={() => saveCleaning(cleaning.map(c => c.id === task.id ? { ...c, lastDone: today() } : c))}>✓ Feito</Btn>
+                    <button onClick={() => saveCleaning(cleaning.filter(c => c.id !== task.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {sub === "compras" && (
+          <>
+            <div className="flex gap-2">
+              <input className="flex-1 border-2 border-black rounded-xl px-3 py-2 text-sm focus:outline-none"
+                placeholder="Adicionar item..." value={newItem}
+                onChange={e => setNewItem(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && addShoppingItem()} />
+              <Btn color={color} onClick={addShoppingItem}>+</Btn>
+            </div>
+            {shopping.some(s => s.done) && (
+              <button onClick={() => saveShopping(shopping.filter(s => !s.done))}
+                className="text-xs text-gray-400 hover:text-red-600 font-medium transition-colors">
+                Limpar itens comprados ({shopping.filter(s => s.done).length})
+              </button>
+            )}
+            {shopping.length === 0 && <EmptyState emoji="🛒" text="Lista vazia!" />}
+            {shopping.filter(s => !s.done).map(item => (
+              <div key={item.id} onClick={() => saveShopping(shopping.map(s => s.id === item.id ? { ...s, done: true } : s))}
+                className="flex items-center gap-3 bg-white rounded-xl border-2 border-black px-3 py-3 cursor-pointer active:scale-[0.99] transition-transform">
+                <div className="w-5 h-5 rounded-md border-2 border-black flex-shrink-0" />
+                <span className="text-sm font-medium flex-1">{item.name}</span>
+                <button onClick={e => { e.stopPropagation(); saveShopping(shopping.filter(s => s.id !== item.id)); }}
+                  className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+              </div>
+            ))}
+            {shopping.filter(s => s.done).map(item => (
+              <div key={item.id} onClick={() => saveShopping(shopping.map(s => s.id === item.id ? { ...s, done: false } : s))}
+                className="flex items-center gap-3 bg-gray-50 rounded-xl border border-gray-200 px-3 py-3 cursor-pointer opacity-60">
+                <div className="w-5 h-5 rounded-md border-2 border-gray-400 bg-gray-300 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-xs font-black">✓</span>
+                </div>
+                <span className="text-sm line-through text-gray-400 flex-1">{item.name}</span>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      <Modal open={modal === "clean"} onClose={() => setModal(null)} title="🧹 Nova Tarefa de Limpeza" color={color}>
+        <Inp label="Tarefa *" value={form.name || ""} onChange={f("name")} placeholder="Ex: Limpar banheiro" />
+        <Sel label="Frequência" value={form.frequency || "Semanal"} onChange={f("frequency")}>
+          {Object.keys(CLEAN_FREQ_COLOR).map(fr => <option key={fr}>{fr}</option>)}
+        </Sel>
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.name) return;
+          saveCleaning([...cleaning, { id: uid(), name: form.name, frequency: form.frequency || "Semanal", lastDone: null }]);
+          setModal(null); setForm({});
+        }}>Adicionar</Btn>
+      </Modal>
+    </div>
+  );
+}
+
+/* ─── FINANÇAS ──────────────────────────────────────────────────────────────── */
+const EXPENSE_CATS = ["Alimentação","Transporte","Lazer","Saúde","Casa","Roupa","Beleza","Assinaturas","Outro"];
+const INVEST_TYPES = ["Renda Fixa","Renda Variável","FIIs","Tesouro Direto","Cripto","Outro"];
+
+function FinancasTab() {
+  const [sub, setSub] = useState("gastos");
+  const [expenses, setExpenses] = useState(() => db.get("orbit_expenses", []));
+  const [investments, setInvestments] = useState(() => db.get("orbit_investments", []));
+  const [bills, setBills] = useState(() => db.get("orbit_bills", []));
+  const [finGoals, setFinGoals] = useState(() => db.get("orbit_fin_goals", []));
+  const [modal, setModal] = useState(null);
+  const [form, setForm] = useState({});
+  const [filterMonth, setFilterMonth] = useState(today().slice(0, 7));
+  const color = "#9B5DE5";
+  const tab = TABS.find(t => t.id === "financas");
+  const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  const saveExpenses = e => { setExpenses(e); db.set("orbit_expenses", e); };
+  const saveInvestments = i => { setInvestments(i); db.set("orbit_investments", i); };
+  const saveBills = b => { setBills(b); db.set("orbit_bills", b); };
+  const saveFinGoals = g => { setFinGoals(g); db.set("orbit_fin_goals", g); };
+
+  const monthExp = expenses.filter(e => e.date.startsWith(filterMonth));
+  const monthTotal = monthExp.reduce((s, e) => s + e.amount, 0);
+  const byCategory = EXPENSE_CATS
+    .map(cat => ({ cat, total: monthExp.filter(e => e.category === cat).reduce((s, e) => s + e.amount, 0) }))
+    .filter(c => c.total > 0).sort((a, b) => b.total - a.total);
+  const totalInvested = investments.reduce((s, i) => s + i.amount, 0);
+
+  return (
+    <div>
+      <TabHeader tab={tab} subtitle={`${fmtMoney(monthTotal)} gastos este mês`} />
+      <SubTabs tabs={[["gastos","💸 Gastos"],["contas","📋 Contas"],["investimentos","📈 Aportes"],["metas","🎯 Metas"]]} active={sub} setActive={setSub} color={color} />
+
+      <div className="p-4 space-y-3">
+        {sub === "gastos" && (
+          <>
+            <div className="flex items-center gap-2">
+              <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}
+                className="flex-1 border-2 border-black rounded-xl px-3 py-2 text-sm focus:outline-none" />
+              <Btn small color={color} onClick={() => { setForm({ date: today(), category: "Alimentação" }); setModal("expense"); }}>+ Gasto</Btn>
+            </div>
+            {byCategory.length > 0 && (
+              <Card>
+                <div className="flex items-baseline justify-between mb-3">
+                  <p className="font-black text-2xl">{fmtMoney(monthTotal)}</p>
+                  <p className="text-xs text-gray-400">total no mês</p>
+                </div>
+                <div className="space-y-2">
+                  {byCategory.map(({ cat, total }) => (
+                    <div key={cat}>
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span className="font-medium">{cat}</span>
+                        <span className="font-bold">{fmtMoney(total)}</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="h-2 rounded-full" style={{ width: `${(total / monthTotal) * 100}%`, backgroundColor: color }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+            {monthExp.length === 0 && <EmptyState emoji="💸" text="Nenhum gasto neste mês." />}
+            {[...monthExp].sort((a, b) => b.date.localeCompare(a.date)).map(exp => (
+              <Card key={exp.id} accentColor={color}>
+                <div className="flex justify-between items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm truncate">{exp.description}</p>
+                    <div className="flex gap-2 mt-0.5 items-center">
+                      <Badge color={color}>{exp.category}</Badge>
+                      <span className="text-xs text-gray-400">{fmtDate(exp.date)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="font-black text-sm">{fmtMoney(exp.amount)}</span>
+                    <button onClick={() => saveExpenses(expenses.filter(e => e.id !== exp.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {sub === "contas" && (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs text-gray-500">{bills.filter(b => !b.paid).length} pendentes · </span>
+                <span className="text-xs font-bold">{fmtMoney(bills.filter(b => !b.paid).reduce((s, b) => s + b.amount, 0))}</span>
+              </div>
+              <Btn small color={color} onClick={() => { setForm({}); setModal("bill"); }}>+ Conta</Btn>
+            </div>
+            {bills.length === 0 && <EmptyState emoji="📋" text="Nenhuma conta cadastrada." />}
+            {[...bills].sort((a, b) => a.dueDay - b.dueDay).map(bill => (
+              <Card key={bill.id} accentColor={bill.paid ? "#52B788" : color}>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1">
+                    <p className={`font-bold text-sm ${bill.paid ? "line-through text-gray-400" : ""}`}>{bill.name}</p>
+                    <div className="flex gap-2 mt-0.5 items-center">
+                      <span className="text-xs text-gray-500">Vence dia {bill.dueDay}</span>
+                      <Badge color={bill.paid ? "#52B788" : color}>{bill.paid ? "Pago" : "Pendente"}</Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="font-black text-sm">{fmtMoney(bill.amount)}</span>
+                    <button onClick={() => saveBills(bills.map(b => b.id === bill.id ? { ...b, paid: !b.paid } : b))}
+                      className={`w-7 h-7 rounded-full border-2 border-black text-sm flex items-center justify-center transition-colors ${bill.paid ? "bg-green-400 text-white" : "bg-white"}`}>
+                      {bill.paid ? "✓" : ""}
+                    </button>
+                    <button onClick={() => saveBills(bills.filter(b => b.id !== bill.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {sub === "investimentos" && (
+          <>
+            {investments.length > 0 && (
+              <Card accentColor={color}>
+                <p className="text-xs text-gray-500">Total registrado</p>
+                <p className="font-black text-2xl">{fmtMoney(totalInvested)}</p>
+              </Card>
+            )}
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({ date: today(), type: "Renda Fixa" }); setModal("investment"); }}>+ Aporte</Btn>
+            </div>
+            {investments.length === 0 && <EmptyState emoji="📈" text="Nenhum investimento registrado." />}
+            {[...investments].sort((a, b) => b.date.localeCompare(a.date)).map(inv => (
+              <Card key={inv.id} accentColor={color}>
+                <div className="flex justify-between items-center gap-2">
+                  <div className="flex-1">
+                    <p className="font-bold text-sm">{inv.name}</p>
+                    <div className="flex gap-2 mt-0.5 items-center">
+                      <Badge color={color}>{inv.type}</Badge>
+                      <span className="text-xs text-gray-400">{fmtDate(inv.date)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="font-black text-sm">{fmtMoney(inv.amount)}</span>
+                    <button onClick={() => saveInvestments(investments.filter(i => i.id !== inv.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </>
+        )}
+
+        {sub === "metas" && (
+          <>
+            <div className="flex justify-end">
+              <Btn small color={color} onClick={() => { setForm({}); setModal("fingoal"); }}>+ Meta</Btn>
+            </div>
+            {finGoals.length === 0 && <EmptyState emoji="🎯" text="Nenhuma meta financeira ainda." />}
+            {finGoals.map(g => {
+              const pct = g.target > 0 ? Math.min(100, Math.round((g.current / g.target) * 100)) : 0;
+              return (
+                <Card key={g.id} accentColor={color}>
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-bold text-sm">{g.name}</p>
+                      {g.deadline && <p className="text-xs text-gray-400">📅 {fmtDate(g.deadline)}</p>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-black text-sm" style={{ color }}>{pct}%</span>
+                      <button onClick={() => saveFinGoals(finGoals.filter(x => x.id !== g.id))} className="text-gray-300 hover:text-red-500 text-xl leading-none">×</button>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden mb-1">
+                    <div className="h-3 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 mb-2">
+                    <span>{fmtMoney(g.current)}</span>
+                    <span>{fmtMoney(g.target)}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input type="number" placeholder="Atualizar valor atual..."
+                      className="flex-1 border border-gray-200 rounded-xl px-2 py-1.5 text-xs focus:outline-none"
+                      value={form[`cur_${g.id}`] || ""}
+                      onChange={e => setForm(p => ({ ...p, [`cur_${g.id}`]: e.target.value }))} />
+                    <Btn small color={color} onClick={() => {
+                      const val = Number(form[`cur_${g.id}`]);
+                      if (!isNaN(val) && val >= 0) {
+                        saveFinGoals(finGoals.map(x => x.id === g.id ? { ...x, current: val } : x));
+                        setForm(p => ({ ...p, [`cur_${g.id}`]: "" }));
+                      }
+                    }}>✓</Btn>
+                  </div>
+                </Card>
+              );
+            })}
+          </>
+        )}
+      </div>
+
+      <Modal open={modal === "expense"} onClose={() => setModal(null)} title="💸 Novo Gasto" color={color}>
+        <Inp label="Descrição *" value={form.description || ""} onChange={f("description")} placeholder="Ex: Almoço" />
+        <Inp label="Valor (R$) *" type="number" step="0.01" value={form.amount || ""} onChange={f("amount")} placeholder="0,00" />
+        <Sel label="Categoria" value={form.category || "Outro"} onChange={f("category")}>
+          {EXPENSE_CATS.map(c => <option key={c}>{c}</option>)}
+        </Sel>
+        <Inp label="Data" type="date" value={form.date || today()} onChange={f("date")} />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.amount || !form.description) return;
+          saveExpenses([...expenses, { id: uid(), date: form.date || today(), amount: Number(form.amount), category: form.category || "Outro", description: form.description }]);
+          setModal(null); setForm({});
+        }}>Registrar gasto</Btn>
+      </Modal>
+
+      <Modal open={modal === "bill"} onClose={() => setModal(null)} title="📋 Nova Conta" color={color}>
+        <Inp label="Nome *" value={form.name || ""} onChange={f("name")} placeholder="Ex: Aluguel, Netflix" />
+        <Inp label="Valor (R$) *" type="number" step="0.01" value={form.amount || ""} onChange={f("amount")} />
+        <Inp label="Dia do vencimento" type="number" min="1" max="31" value={form.dueDay || ""} onChange={f("dueDay")} placeholder="Ex: 15" />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.name || !form.amount) return;
+          saveBills([...bills, { id: uid(), name: form.name, amount: Number(form.amount), dueDay: Number(form.dueDay) || 1, paid: false }]);
+          setModal(null); setForm({});
+        }}>Adicionar conta</Btn>
+      </Modal>
+
+      <Modal open={modal === "investment"} onClose={() => setModal(null)} title="📈 Novo Aporte" color={color}>
+        <Inp label="Nome *" value={form.name || ""} onChange={f("name")} placeholder="Ex: CDB Nubank, IVVB11" />
+        <Inp label="Valor (R$) *" type="number" step="0.01" value={form.amount || ""} onChange={f("amount")} />
+        <Sel label="Tipo" value={form.type || "Renda Fixa"} onChange={f("type")}>
+          {INVEST_TYPES.map(t => <option key={t}>{t}</option>)}
+        </Sel>
+        <Inp label="Data" type="date" value={form.date || today()} onChange={f("date")} />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.name || !form.amount) return;
+          saveInvestments([...investments, { id: uid(), name: form.name, type: form.type || "Renda Fixa", amount: Number(form.amount), date: form.date || today() }]);
+          setModal(null); setForm({});
+        }}>Registrar aporte</Btn>
+      </Modal>
+
+      <Modal open={modal === "fingoal"} onClose={() => setModal(null)} title="🎯 Nova Meta Financeira" color={color}>
+        <Inp label="Meta *" value={form.name || ""} onChange={f("name")} placeholder="Ex: Reserva de emergência" />
+        <Inp label="Valor alvo (R$) *" type="number" step="0.01" value={form.target || ""} onChange={f("target")} placeholder="Ex: 10000" />
+        <Inp label="Valor atual (R$)" type="number" step="0.01" value={form.current || ""} onChange={f("current")} placeholder="0" />
+        <Inp label="Prazo" type="date" value={form.deadline || ""} onChange={f("deadline")} />
+        <Btn color={color} className="w-full" onClick={() => {
+          if (!form.name || !form.target) return;
+          saveFinGoals([...finGoals, { id: uid(), name: form.name, target: Number(form.target), current: Number(form.current) || 0, deadline: form.deadline || "" }]);
+          setModal(null); setForm({});
+        }}>Criar meta</Btn>
+      </Modal>
+    </div>
+  );
+}
+
+/* ─── HOME ──────────────────────────────────────────────────────────────────── */
+function HomeTab({ setActiveTab }) {
+  const books = db.get("orbit_books", []);
+  const courses = db.get("orbit_courses", []);
+  const tasks = db.get("orbit_tasks", []);
+  const habits = db.get("orbit_habits", []);
+  const habitLogs = db.get("orbit_habit_logs", {});
+  const bills = db.get("orbit_bills", []);
+  const expenses = db.get("orbit_expenses", []);
+  const travels = db.get("orbit_travels", []);
+  const investments = db.get("orbit_investments", []);
+  const shopping = db.get("orbit_shopping", []);
+
+  const td = today();
+  const todayDone = habitLogs[td] || [];
+  const habitPct = habits.length ? Math.round(todayDone.length / habits.length * 100) : 0;
+  const currentBook = books.find(b => b.status === "Em Andamento");
+  const monthTotal = expenses.filter(e => e.date.startsWith(td.slice(0, 7))).reduce((s, e) => s + e.amount, 0);
+  const openTasks = tasks.filter(t => t.status !== "Concluído").length;
+  const pendingBills = bills.filter(b => !b.paid).length;
+
+  const sections = [
+    {
+      id: "estudos", color: "#4361EE", bg: "#EEF1FF", emoji: "📚", title: "Estudos",
+      lines: [
+        currentBook ? `Lendo: ${currentBook.title}` : `${books.filter(b => b.status === "Concluído").length} livros concluídos`,
+        `${courses.length} curso${courses.length !== 1 ? "s" : ""}`,
+      ]
+    },
+    {
+      id: "trabalho", color: "#52B788", bg: "#EDFBF0", emoji: "💼", title: "Trabalho",
+      lines: [`${openTasks} tarefa${openTasks !== 1 ? "s" : ""} em aberto`]
+    },
+    {
+      id: "vida", color: "#FF6B9D", bg: "#FFF0F7", emoji: "🌸", title: "Vida",
+      lines: [
+        habits.length ? `${habitPct}% dos hábitos hoje` : "Nenhum hábito cadastrado",
+        `${travels.filter(t => ["Planejando","Confirmado"].includes(t.status)).length} viagens planejadas`,
+      ]
+    },
+    {
+      id: "casa", color: "#B45309", bg: "#FFFAEE", emoji: "🏡", title: "Casa",
+      lines: [`${shopping.filter(s => !s.done).length} itens na lista de compras`]
+    },
+    {
+      id: "financas", color: "#9B5DE5", bg: "#F5EEFF", emoji: "💰", title: "Finanças",
+      lines: [
+        `${fmtMoney(monthTotal)} gastos este mês`,
+        `${pendingBills} conta${pendingBills !== 1 ? "s" : ""} a pagar`,
+      ]
+    },
+  ];
+
+  return (
+    <div className="p-4 space-y-4 pt-8">
+      {/* Brand header */}
+      <div className="mb-2">
+        <div className="flex items-center gap-2">
+          <h1 className="font-black text-4xl tracking-tight" style={{ color: "#E63946" }}>My Orbit</h1>
+          <span className="text-3xl">✦</span>
+        </div>
+        <p className="text-sm text-gray-500 mt-0.5 capitalize">
+          {new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })}
+        </p>
+      </div>
+
+      {/* Habit progress bar */}
+      {habits.length > 0 && (
+        <div className="rounded-2xl border-2 border-black p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+          style={{ background: "linear-gradient(135deg, #FFF0F2, #FFE0E8)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-black text-sm">🌱 Hábitos de hoje</p>
+            <span className="font-black text-2xl" style={{ color: "#FF6B9D" }}>{habitPct}%</span>
+          </div>
+          <div className="w-full bg-white/60 rounded-full h-3 overflow-hidden">
+            <div className="h-3 rounded-full transition-all duration-500" style={{ width: `${habitPct}%`, backgroundColor: "#FF6B9D" }} />
+          </div>
+          <p className="text-xs text-gray-600 mt-1">{todayDone.length} de {habits.length} concluídos</p>
+        </div>
+      )}
+
+      {/* Section cards */}
+      {sections.map(s => (
+        <button key={s.id} onClick={() => setActiveTab(s.id)} className="w-full text-left">
+          <div className="rounded-2xl border-2 border-black p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
+            style={{ backgroundColor: s.bg }}>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{s.emoji}</span>
+                <span className="font-black text-base" style={{ color: s.color }}>{s.title} em Ordem</span>
+              </div>
+              <span className="text-gray-400 text-lg">›</span>
+            </div>
+            {s.lines.map((line, i) => (
+              <p key={i} className="text-xs text-gray-600 leading-relaxed">• {line}</p>
+            ))}
+          </div>
+        </button>
+      ))}
+
+      <div className="h-4" />
+    </div>
+  );
+}
+
+/* ─── APP ───────────────────────────────────────────────────────────────────── */
+export default function App() {
+  const [activeTab, setActiveTab] = useState("home");
+
+  const navItems = [
+    { id: "home",     emoji: "✦",  label: "Home" },
+    { id: "estudos",  emoji: "📚", label: "Estudos" },
+    { id: "trabalho", emoji: "💼", label: "Trabalho" },
+    { id: "vida",     emoji: "🌸", label: "Vida" },
+    { id: "casa",     emoji: "🏡", label: "Casa" },
+    { id: "financas", emoji: "💰", label: "Finanças" },
+  ];
+
+  return (
+    <div className="min-h-screen max-w-lg mx-auto flex flex-col relative" style={{ backgroundColor: "#FFF8F0" }}>
+      <div className="flex-1 pb-20 overflow-y-auto">
+        {activeTab === "home"     && <HomeTab setActiveTab={setActiveTab} />}
+        {activeTab === "estudos"  && <EstudosTab />}
+        {activeTab === "trabalho" && <TrabalhoTab />}
+        {activeTab === "vida"     && <VidaTab />}
+        {activeTab === "casa"     && <CasaTab />}
+        {activeTab === "financas" && <FinancasTab />}
+      </div>
+
+      <nav className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t-2 border-black z-40 safe-bottom">
+        <div className="flex">
+          {navItems.map(item => {
+            const tab = TABS.find(t => t.id === item.id);
+            const active = activeTab === item.id;
+            return (
+              <button key={item.id} onClick={() => setActiveTab(item.id)}
+                className="flex-1 flex flex-col items-center py-2 gap-0.5 transition-all">
+                <span className={`text-xl transition-transform duration-150 ${active ? "scale-125" : ""}`}>{item.emoji}</span>
+                <span className="text-[9px] font-bold transition-colors"
+                  style={{ color: active ? (tab?.color || "#E63946") : "#9ca3af" }}>
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </nav>
     </div>
