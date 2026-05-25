@@ -1,8 +1,8 @@
-name: Deploy FitLife
+name: Deploy A Vida Toda
 
 on:
   push:
-    branches: [main, claude/fitness-workout-diet-app-6qiMW, claude/personal-life-dashboard-uNU3l]
+    branches: [main]
 
 permissions:
   contents: read
