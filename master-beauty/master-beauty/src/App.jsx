@@ -47,52 +47,6 @@ const TABS = [
   { id: "financas", label: "Finanças", emoji: "💰", color: P.plum,   bg: "#F5EEFF", light: "#E8D4FF" },
 ];
 
-/* ─── Notifications ──────────────────────────────────────────────────────────── */
-const Notif = {
-  supported: () => "Notification" in window,
-  granted: () => Notif.supported() && Notification.permission === "granted",
-  request: async () => {
-    if (!Notif.supported()) return false;
-    const p = await Notification.requestPermission();
-    return p === "granted";
-  },
-  send: (title, body) => {
-    if (Notif.granted()) new Notification(title, { body, icon: "/favicon.ico" });
-  },
-  checkOnOpen: () => {
-    if (!Notif.granted()) return;
-    const td = today();
-    const lastKey = "orbit_notif_last_" + td;
-    if (db.get(lastKey)) return;
-    db.set(lastKey, true);
-
-    const habits = db.get("orbit_habits", []);
-    const logs = db.get("orbit_habit_logs", {})[td] || [];
-    const pending = habits.filter(h => !logs.includes(h.id));
-    const hour = new Date().getHours();
-    if (hour >= 19 && pending.length > 0)
-      Notif.send("A Vida Toda ✦", `${pending.length} hábito${pending.length > 1 ? "s" : ""} pendente${pending.length > 1 ? "s" : ""} hoje.`);
-
-    const bills = db.get("orbit_bills", []);
-    const dayN = new Date().getDate();
-    const dueSoon = bills.filter(b => !b.paid && [dayN, dayN + 1, dayN + 2].includes(b.dueDay));
-    if (dueSoon.length > 0)
-      Notif.send("Conta a pagar — A Vida Toda", `${dueSoon[0].name} vence em breve!`);
-
-    const reminders = db.get("orbit_notes", []);
-    const now = new Date();
-    let changed = false;
-    const updated = reminders.map(r => {
-      if (r.reminder && !r.notified && new Date(r.reminder) <= now) {
-        Notif.send("📝 Lembrete — A Vida Toda", r.title);
-        changed = true;
-        return { ...r, notified: true };
-      }
-      return r;
-    });
-    if (changed) db.set("orbit_notes", updated);
-  },
-};
 
 /* ─── UI Primitives ──────────────────────────────────────────────────────────── */
 function Btn({ children, onClick, color = P.red, small, ghost, className = "" }) {
@@ -293,7 +247,7 @@ function NotesPanel({ onClose }) {
             rows={3} placeholder="Detalhes..." value={form.content || ""} onChange={f("content")} />
         </Field>
         <Inp label="Lembrete (opcional)" type="datetime-local" value={form.reminder || ""} onChange={f("reminder")} />
-        {form.reminder && !Notif.granted() && (
+        {false && (
           <p className="text-xs text-amber-600 bg-amber-50 rounded-xl px-3 py-2 border border-amber-200">
             ⚠️ Ative as notificações em Configurações para receber o lembrete.
           </p>
@@ -1426,10 +1380,7 @@ function HomeTab({ setActiveTab }) {
   const [showReview, setShowReview]     = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showNotes, setShowNotes]       = useState(false);
-  const [notifEnabled, setNotifEnabled] = useState(Notif.granted());
   const noteCount = db.get("orbit_notes", []).filter(n => n.reminder && !n.notified && new Date(n.reminder) <= new Date()).length;
-
-  useEffect(() => { Notif.checkOnOpen(); }, []);
 
   const books       = db.get("orbit_books", []);
   const courses     = db.get("orbit_courses", []);
@@ -1574,20 +1525,6 @@ function HomeTab({ setActiveTab }) {
 
       <Modal open={showSettings} onClose={() => setShowSettings(false)} title="⚙️ Configurações" color={P.red}>
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200">
-            <div>
-              <p className="font-semibold text-sm">🔔 Lembretes</p>
-              <p className="text-xs text-gray-400 mt-0.5">Notificação de hábitos e contas a pagar</p>
-            </div>
-            {notifEnabled ? (
-              <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700">Ativo</span>
-            ) : (
-              <Btn small color={P.red} onClick={async () => {
-                const ok = await Notif.request();
-                setNotifEnabled(ok);
-              }}>Ativar</Btn>
-            )}
-          </div>
           <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200">
             <p className="font-semibold text-sm">✦ A Vida Toda</p>
             <p className="text-xs text-gray-400 mt-1">Seu dashboard pessoal. Dados salvos localmente neste dispositivo.</p>
