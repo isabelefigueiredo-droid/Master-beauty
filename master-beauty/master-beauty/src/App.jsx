@@ -1,11 +1,27 @@
-import { useState, useEffect, useCallback } from 'react'
-import { db, auth, googleProvider } from './firebase.js'
-import {
-  collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp
-} from 'firebase/firestore'
-import {
-  signInWithPopup, signOut, onAuthStateChanged
-} from 'firebase/auth'
+import { useState } from 'react'
+
+// ─── Data Layer ───────────────────────────────────────────────────────────────
+const db = {
+  get: (k, d = null) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+}
+const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36)
+const today = () => new Date().toISOString().split('T')[0]
+
+const KEYS = ['avt_books','avt_courses','avt_brands','avt_pipeline','avt_tasks','avt_goals_career','avt_ideas','avt_habits','avt_habit_logs','avt_life_goals','avt_moods','avt_appointments','avt_cleaning','avt_shopping','avt_expenses','avt_accounts','avt_cards','avt_fin_goals','avt_notes']
+
+function exportData() {
+  const obj = {}
+  KEYS.forEach(k => { const v = localStorage.getItem(k); if (v) obj[k] = v })
+  return btoa(unescape(encodeURIComponent(JSON.stringify(obj))))
+}
+function importData(code) {
+  try {
+    const obj = JSON.parse(decodeURIComponent(escape(atob(code))))
+    Object.entries(obj).forEach(([k, v]) => localStorage.setItem(k, v))
+    window.location.reload()
+  } catch { alert('Código inválido') }
+}
 
 // ─── Design Tokens ───────────────────────────────────────────────────────────
 const P = {
@@ -13,40 +29,66 @@ const P = {
   forest: '#2A5C45', rose: '#C94070', amber: '#B84A2A',
   plum: '#6B2D8B', teal: '#0F7173', dark: '#1A1A1A',
 }
+const stripe = `repeating-linear-gradient(-45deg,transparent,transparent 8px,rgba(255,255,255,0.07) 8px,rgba(255,255,255,0.07) 16px)`
 
-// ─── UI Helpers ───────────────────────────────────────────────────────────────
-const stripe = (color, opacity = 0.08) =>
-  `repeating-linear-gradient(-45deg, transparent, transparent 8px, ${
-    color === 'light'
-      ? `rgba(255,255,255,${opacity})`
-      : `rgba(0,0,0,${opacity})`
-  } 8px, ${
-    color === 'light'
-      ? `rgba(255,255,255,${opacity})`
-      : `rgba(0,0,0,${opacity})`
-  } 16px)`
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const money = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const fmtDate = (d) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') } catch { return d } }
+const fmtFollowers = (n) => {
+  const num = Number(n || 0)
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'k'
+  return String(num)
+}
 
-function ScallopBorder({ fill = P.cream }) {
+// ─── ScallopBorder ────────────────────────────────────────────────────────────
+function ScallopBorder({ fill = '#FFF9F5' }) {
   return (
-    <svg viewBox="0 0 390 24" preserveAspectRatio="none"
-      style={{ display: 'block', width: '100%', height: 24, marginTop: -1 }}>
+    <svg viewBox="0 0 390 24" preserveAspectRatio="none" style={{ display: 'block', width: '100%', height: 24, marginTop: -1 }}>
       <path fill={fill} d="M0,24 L0,12 Q9.75,0 19.5,12 Q29.25,24 39,12 Q48.75,0 58.5,12 Q68.25,24 78,12 Q87.75,0 97.5,12 Q107.25,24 117,12 Q126.75,0 136.5,12 Q146.25,24 156,12 Q165.75,0 175.5,12 Q185.25,24 195,12 Q204.75,0 214.5,12 Q224.25,24 234,12 Q243.75,0 253.5,12 Q263.25,24 273,12 Q282.75,0 292.5,12 Q302.25,24 312,12 Q321.75,0 331.5,12 Q341.25,24 351,12 Q360.75,0 370.5,12 Q380.25,24 390,12 L390,24 Z" />
     </svg>
   )
 }
 
-function TabHeader({ color, emoji, title, subtitle, children }) {
+// ─── UI Helpers ───────────────────────────────────────────────────────────────
+const inp = 'w-full border-2 border-black rounded-xl px-3 py-2.5 text-sm focus:outline-none bg-white'
+function Inp({ label, ...p }) { return <div className="flex flex-col gap-1"><label className="text-xs font-bold uppercase tracking-widest text-gray-400">{label}</label><input className={inp} {...p} /></div> }
+function Sel({ label, children, ...p }) { return <div className="flex flex-col gap-1"><label className="text-xs font-bold uppercase tracking-widest text-gray-400">{label}</label><select className={inp} {...p}>{children}</select></div> }
+function Tex({ label, ...p }) { return <div className="flex flex-col gap-1"><label className="text-xs font-bold uppercase tracking-widest text-gray-400">{label}</label><textarea className={inp + ' resize-none'} rows={3} {...p} /></div> }
+
+function Btn({ children, onClick, color = P.red, ghost, small, full, className = '' }) {
+  const base = 'font-bold rounded-xl border-2 border-black transition-all active:scale-95 cursor-pointer select-none'
+  const sz = small ? 'px-3 py-1 text-xs' : 'px-5 py-2.5 text-sm'
+  return <button onClick={onClick} className={`${base} ${sz} ${full ? 'w-full' : ''} ${className}`} style={ghost ? { background: 'white', color: P.dark } : { background: color, color: 'white' }}>{children}</button>
+}
+
+function Modal({ open, onClose, title, children }) {
+  if (!open) return null
   return (
-    <div>
-      <div style={{ background: color, backgroundImage: stripe('light'), padding: '20px 16px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>
-              {emoji} {subtitle}
-            </p>
-            <h2 className="font-display" style={{ color: 'white', fontSize: 32, lineHeight: 1 }}>{title}</h2>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div style={{ background: 'white', borderRadius: '24px 24px 0 0', border: '2.5px solid black', width: '100%', maxHeight: '92vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '20px 20px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontWeight: 800, fontSize: 18 }}>{title}</h3>
+            <button onClick={onClose} style={{ fontSize: 24, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
           </div>
-          {children}
+        </div>
+        <div style={{ padding: '0 20px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>{children}</div>
+      </div>
+    </div>
+  )
+}
+
+function TabHeader({ color, emoji, title, action }) {
+  return (
+    <div style={{ marginBottom: 0 }}>
+      <div style={{ background: color, backgroundImage: stripe, padding: '20px 16px 4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>{emoji} seção</p>
+            <h2 className="font-display" style={{ color: 'white', fontSize: 34, lineHeight: 1.05, marginTop: 2 }}>{title}</h2>
+          </div>
+          {action}
         </div>
       </div>
       <ScallopBorder />
@@ -54,1011 +96,805 @@ function TabHeader({ color, emoji, title, subtitle, children }) {
   )
 }
 
-function Modal({ open, onClose, title, children }) {
-  if (!open) return null
+function SubTabs({ tabs, active, onChange, color }) {
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end' }}
-      onClick={onClose}
-    >
-      <div
-        style={{ background: 'white', borderRadius: '24px 24px 0 0', border: '2.5px solid black', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: 20 }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ fontWeight: 800, fontSize: 18 }}>{title}</h3>
-          <button onClick={onClose} style={{ fontSize: 22, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-// ─── Shared Input Styles ──────────────────────────────────────────────────────
-const inputStyle = {
-  width: '100%', border: '2px solid #1A1A1A', borderRadius: 10, padding: '8px 12px',
-  fontSize: 14, fontFamily: 'Inter, system-ui, sans-serif', background: P.cream,
-  marginBottom: 10, outline: 'none', boxSizing: 'border-box',
-}
-const btnPrimary = (color = P.red) => ({
-  background: color, color: 'white', border: '2.5px solid black', borderRadius: 12,
-  padding: '10px 20px', fontWeight: 800, fontSize: 14, cursor: 'pointer',
-  boxShadow: '3px 3px 0 black', width: '100%', marginTop: 4,
-})
-const btnSecondary = {
-  background: 'white', color: P.dark, border: '2px solid #ccc', borderRadius: 10,
-  padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-}
-
-// ─── Data Hook ────────────────────────────────────────────────────────────────
-function useCol(userId, name) {
-  const [data, setData] = useState([])
-  useEffect(() => {
-    if (!userId) { setData([]); return }
-    const ref = collection(db, 'users', userId, name)
-    return onSnapshot(ref, snap => setData(snap.docs.map(d => ({ id: d.id, ...d.data() }))))
-  }, [userId, name])
-  const add    = d => addDoc(collection(db, 'users', userId, name), { ...d, _t: serverTimestamp() })
-  const upd    = (id, d) => updateDoc(doc(db, 'users', userId, name, id), d)
-  const remove = id => deleteDoc(doc(db, 'users', userId, name, id))
-  return { data, add, upd, remove }
-}
-
-// ─── Utility ──────────────────────────────────────────────────────────────────
-const today = () => new Date().toISOString().split('T')[0]
-const fmtBRL = n => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const diffDays = (d1, d2) => Math.floor((new Date(d1) - new Date(d2)) / 86400000)
-
-function SubTabs({ tabs, active, setActive, color }) {
-  return (
-    <div style={{ display: 'flex', gap: 6, padding: '12px 12px 0', overflowX: 'auto' }} className="scrollbar-hide">
+    <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid black', background: 'white', overflowX: 'auto' }}>
       {tabs.map(t => (
-        <button
-          key={t}
-          onClick={() => setActive(t)}
-          style={{
-            flexShrink: 0, padding: '6px 14px', borderRadius: 20, fontWeight: 700, fontSize: 13,
-            border: '2px solid black', cursor: 'pointer',
-            background: active === t ? color : 'white',
-            color: active === t ? 'white' : P.dark,
-            boxShadow: active === t ? '2px 2px 0 black' : 'none',
-          }}
-        >{t}</button>
+        <button key={t} onClick={() => onChange(t)} style={{
+          flex: '0 0 auto', padding: '10px 16px', fontSize: 13, fontWeight: 700,
+          color: active === t ? color : P.dark, background: 'none', border: 'none',
+          borderBottom: active === t ? `3px solid ${color}` : '3px solid transparent',
+          cursor: 'pointer', whiteSpace: 'nowrap'
+        }}>{t}</button>
       ))}
     </div>
   )
 }
 
-// ─── HOME TAB ─────────────────────────────────────────────────────────────────
-const TILES = [
-  { id: 'estudos',  emoji: '📚', label: 'Estudos',  color: P.navy   },
-  { id: 'trabalho', emoji: '💼', label: 'Trabalho', color: P.forest },
-  { id: 'vida',     emoji: '🌸', label: 'Vida',     color: P.rose   },
-  { id: 'financas', emoji: '💰', label: 'Finanças', color: P.plum   },
-  { id: 'casa',     emoji: '🏡', label: 'Casa',     color: P.amber  },
-  { id: 'notas',    emoji: '📝', label: 'Notas',    color: P.teal   },
-]
+function Badge({ label, color, textColor = 'white' }) {
+  return <span style={{ background: color, color: textColor, fontSize: 10, fontWeight: 700, borderRadius: 8, padding: '2px 8px', border: '1.5px solid black', letterSpacing: 0.5 }}>{label}</span>
+}
 
-function HomeTile({ tile, metric, onClick }) {
+function ProgressBar({ value, color = P.navy }) {
+  const pct = Math.min(100, Math.max(0, Number(value) || 0))
   return (
-    <div
-      onClick={onClick}
-      style={{
-        background: tile.color, backgroundImage: stripe('dark', 0.06),
-        borderRadius: 20, border: '2.5px solid black', boxShadow: '4px 4px 0 black',
-        padding: '20px 16px 16px', cursor: 'pointer', minHeight: 140,
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-      }}
-    >
-      <div>
-        <span style={{ fontSize: 32 }}>{tile.emoji}</span>
-        <p className="font-display" style={{ color: 'white', fontSize: 22, marginTop: 4, lineHeight: 1.1 }}>{tile.label}</p>
-      </div>
-      <p className="font-numbers" style={{ color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: 700 }}>{metric}</p>
+    <div style={{ background: '#E5E7EB', borderRadius: 99, height: 6, overflow: 'hidden', marginTop: 6 }}>
+      <div style={{ background: color, height: '100%', width: `${pct}%`, borderRadius: 99, transition: 'width 0.3s' }} />
     </div>
   )
 }
 
-function HomeTab({ userId, setActiveTab, data }) {
-  const dateStr = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+// ─── HOME TAB ────────────────────────────────────────────────────────────────
+function HomeTile({ color, emoji, label, metric, onClick }) {
+  return (
+    <div onClick={onClick} style={{
+      background: color, backgroundImage: stripe,
+      borderRadius: 20, border: '2.5px solid black', boxShadow: '4px 4px 0 black',
+      padding: '18px 14px 16px', cursor: 'pointer', minHeight: 150,
+      display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+    }}>
+      <div>
+        <span style={{ fontSize: 30 }}>{emoji}</span>
+        <p className="font-display" style={{ color: 'white', fontSize: 24, lineHeight: 1.05, marginTop: 6 }}>{label}</p>
+      </div>
+      <p className="font-numbers" style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: 700, marginTop: 8 }}>{metric}</p>
+    </div>
+  )
+}
 
-  const metrics = {
-    estudos:  (() => {
-      const lendo = (data.books || []).filter(b => b.status === 'lendo').length
-      const cursos = (data.courses || []).filter(c => c.status !== 'Concluído').length
-      return `${lendo} lendo · ${cursos} cursos`
-    })(),
-    trabalho: (() => {
-      const brands = (data.brands || []).filter(b => b.status === 'Live').length
-      const tasks = (data.tasks || []).filter(t => !t.done).length
-      return `${brands} marcas live · ${tasks} tarefas`
-    })(),
-    vida: (() => {
-      const habits = (data.habits || []).length
-      const logs = (data.habitLogs || []).filter(l => l.date === today() && l.done).length
-      return `${logs}/${habits} hábitos hoje`
-    })(),
-    financas: (() => {
-      const saldo = (data.accounts || []).reduce((s, a) => s + (Number(a.balance) || 0), 0)
-      return fmtBRL(saldo)
-    })(),
-    casa: (() => {
-      const pending = (data.shopping || []).filter(s => !s.done).length
-      const overdue = (data.cleaningTasks || []).filter(t => {
-        if (!t.lastDone || !t.frequency) return false
-        return diffDays(today(), t.lastDone) >= Number(t.frequency)
-      }).length
-      return `${pending} compras · ${overdue} atrasadas`
-    })(),
-    notas: (() => {
-      const total = (data.notes || []).length
-      const overdue = (data.notes || []).filter(n => n.reminder && !n.done && n.reminder < new Date().toISOString()).length
-      return `${total} notas · ${overdue} lembretes`
-    })(),
-  }
+function HomeTab({ setTab, onNotes, onSettings }) {
+  const books = db.get('avt_books', [])
+  const courses = db.get('avt_courses', [])
+  const brands = db.get('avt_brands', [])
+  const pipeline = db.get('avt_pipeline', [])
+  const habits = db.get('avt_habits', [])
+  const habitLogs = db.get('avt_habit_logs', {})
+  const todayLog = habitLogs[today()] || []
+  const expenses = db.get('avt_expenses', [])
+  const cleaning = db.get('avt_cleaning', [])
+  const notes = db.get('avt_notes', [])
+
+  const thisMonth = new Date().toISOString().slice(0, 7)
+  const monthSpend = expenses.filter(e => e.type === 'saída' && e.date && e.date.startsWith(thisMonth)).reduce((s, e) => s + Number(e.amount || 0), 0)
+
+  const pendingCleaning = cleaning.filter(t => {
+    if (!t.lastDone) return true
+    const diff = Math.floor((Date.now() - new Date(t.lastDone + 'T12:00:00').getTime()) / 86400000)
+    return diff >= Number(t.frequency || 1)
+  }).length
+
+  const activeReminders = notes.filter(n => !n.done && n.reminder).length
+
+  const d = new Date()
+  const weekdays = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado']
+  const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+  const weekdayDate = `${weekdays[d.getDay()]}, ${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`
+
+  const tiles = [
+    { color: P.navy, emoji: '📚', label: 'Estudos', metric: `${books.length} livros, ${courses.length} cursos`, tab: 'estudos' },
+    { color: P.forest, emoji: '💼', label: 'Trabalho', metric: `${brands.length} marcas, ${pipeline.length} no pipe`, tab: 'trabalho' },
+    { color: P.rose, emoji: '🌸', label: 'Vida', metric: `${todayLog.length}/${habits.length} hábitos hoje`, tab: 'vida' },
+    { color: P.plum, emoji: '💰', label: 'Finanças', metric: `${money(monthSpend)} gastos`, tab: 'financas' },
+    { color: P.amber, emoji: '🏡', label: 'Casa', metric: `${pendingCleaning} tarefas pendentes`, tab: 'casa' },
+    { color: P.teal, emoji: '📝', label: 'Notas', metric: `${activeReminders} lembretes`, onClick: onNotes },
+  ]
 
   return (
-    <div>
-      <div style={{ background: P.red, backgroundImage: stripe('light'), padding: '20px 16px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 className="font-display" style={{ fontSize: 36, color: 'white', lineHeight: 1 }}>A Vida Toda</h1>
-          <button
-            onClick={() => signOut(auth)}
-            style={{ color: 'white', fontSize: 12, opacity: 0.7, background: 'none', border: 'none', cursor: 'pointer' }}
-          >Sair</button>
+    <div style={{ paddingBottom: 88 }}>
+      <div style={{ background: P.red, backgroundImage: stripe, padding: '20px 16px 4px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1 className="font-display" style={{ color: 'white', fontSize: 38, lineHeight: 1 }}>A Vida Toda</h1>
+            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 4 }}>{weekdayDate}</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <button onClick={onNotes} style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.5)', borderRadius: 12, padding: '6px 10px', fontSize: 18, cursor: 'pointer' }}>📝</button>
+            <button onClick={onSettings} style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.5)', borderRadius: 12, padding: '6px 10px', fontSize: 18, cursor: 'pointer' }}>⚙️</button>
+          </div>
         </div>
-        <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 4 }}>{dateStr}</p>
-        <ScallopBorder />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: '16px 12px', paddingBottom: 80 }}>
-        {TILES.map(tile => (
-          <HomeTile
-            key={tile.id}
-            tile={tile}
-            metric={metrics[tile.id]}
-            onClick={() => setActiveTab(tile.id === 'notas' ? 'notas' : tile.id)}
-          />
+      <ScallopBorder />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: '16px 12px 0' }}>
+        {tiles.map(t => (
+          <HomeTile key={t.tab || t.label} color={t.color} emoji={t.emoji} label={t.label} metric={t.metric} onClick={t.onClick || (() => setTab(t.tab))} />
         ))}
       </div>
     </div>
   )
 }
 
-// ─── ESTUDOS TAB ──────────────────────────────────────────────────────────────
-function EstudosTab({ userId }) {
+// ─── ESTUDOS TAB ─────────────────────────────────────────────────────────────
+function EstudosTab() {
   const [sub, setSub] = useState('Livros')
-  const books   = useCol(userId, 'books')
-  const courses = useCol(userId, 'courses')
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({})
+  const [refresh, setRefresh] = useState(0)
 
-  const statusColors = { 'lendo': P.navy, 'quero ler': P.teal, 'lido': P.forest }
-  const statusBg     = { 'lendo': '#e8eef7', 'quero ler': '#e0f4f4', 'lido': '#e6f2ec' }
+  const books = db.get('avt_books', [])
+  const courses = db.get('avt_courses', [])
 
-  function openAdd() { setForm({}); setModal(sub === 'Livros' ? 'add-book' : 'add-course') }
-  function openEdit(item) { setForm(item); setModal(sub === 'Livros' ? 'edit-book' : 'edit-course') }
+  const statusColorBook = { 'Lendo': P.navy, 'Lido': P.forest, 'Quero Ler': '#6B7280' }
+  const statusColorCourse = { 'Em andamento': P.navy, 'Concluído': P.forest, 'Pausado': '#6B7280' }
 
-  async function saveBook() {
-    if (!form.title) return
-    const d = { title: form.title, author: form.author || '', status: form.status || 'quero ler', progress: Number(form.progress || 0), notes: form.notes || '' }
-    if (form.id) await books.upd(form.id, d)
-    else await books.add(d)
-    setModal(null)
+  function openAdd() {
+    if (sub === 'Livros') setForm({ status: 'Quero Ler', progress: 0 })
+    else setForm({ status: 'Em andamento', progress: 0 })
+    setModal('add')
   }
 
-  async function saveCourse() {
-    if (!form.name) return
-    const d = { name: form.name, platform: form.platform || '', status: form.status || 'Em andamento', progress: Number(form.progress || 0), notes: form.notes || '' }
-    if (form.id) await courses.upd(form.id, d)
-    else await courses.add(d)
-    setModal(null)
+  function openEdit(item) {
+    setForm({ ...item })
+    setModal('edit')
   }
+
+  function save() {
+    if (sub === 'Livros') {
+      const list = db.get('avt_books', [])
+      if (modal === 'add') db.set('avt_books', [...list, { ...form, id: uid() }])
+      else db.set('avt_books', list.map(b => b.id === form.id ? form : b))
+    } else {
+      const list = db.get('avt_courses', [])
+      if (modal === 'add') db.set('avt_courses', [...list, { ...form, id: uid() }])
+      else db.set('avt_courses', list.map(c => c.id === form.id ? form : c))
+    }
+    setModal(null)
+    setRefresh(r => r + 1)
+  }
+
+  function del() {
+    if (!window.confirm('Excluir?')) return
+    if (sub === 'Livros') db.set('avt_books', db.get('avt_books', []).filter(b => b.id !== form.id))
+    else db.set('avt_courses', db.get('avt_courses', []).filter(c => c.id !== form.id))
+    setModal(null)
+    setRefresh(r => r + 1)
+  }
+
+  const bookList = db.get('avt_books', [])
+  const courseList = db.get('avt_courses', [])
 
   return (
-    <div>
-      <TabHeader color={P.navy} emoji="📚" title="Estudos" subtitle="sua biblioteca">
-        <button onClick={openAdd} style={{ background: 'white', border: '2px solid black', borderRadius: 12, padding: '6px 14px', fontWeight: 800, fontSize: 20, cursor: 'pointer', boxShadow: '2px 2px 0 black' }}>+</button>
-      </TabHeader>
-      <SubTabs tabs={['Livros', 'Cursos']} active={sub} setActive={setSub} color={P.navy} />
+    <div style={{ paddingBottom: 88 }}>
+      <TabHeader color={P.navy} emoji="📚" title="Estudos" action={
+        <Btn small onClick={openAdd} color="rgba(255,255,255,0.25)" className="border-white border-opacity-50">+ Add</Btn>
+      } />
+      <SubTabs tabs={['Livros', 'Cursos']} active={sub} onChange={setSub} color={P.navy} />
 
-      <div style={{ padding: '12px 12px 80px' }}>
-        {sub === 'Livros' && (
-          <>
-            {books.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhum livro ainda. Adicione um!</p>}
-            {books.data.map(b => (
-              <div key={b.id} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: 14, marginBottom: 10, boxShadow: '3px 3px 0 black' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 800, fontSize: 15 }}>{b.title}</p>
-                    {b.author && <p style={{ fontSize: 13, color: '#666', marginTop: 2 }}>{b.author}</p>}
-                  </div>
-                  <span style={{ background: statusBg[b.status] || '#eee', color: statusColors[b.status] || P.dark, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, border: `1.5px solid ${statusColors[b.status] || '#ccc'}`, whiteSpace: 'nowrap', marginLeft: 8 }}>
-                    {b.status}
-                  </span>
-                </div>
-                {b.status === 'lendo' && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                      <span>Progresso</span><span className="font-numbers">{b.progress || 0}%</span>
-                    </div>
-                    <div style={{ background: '#eee', borderRadius: 999, height: 8, overflow: 'hidden' }}>
-                      <div style={{ background: P.navy, height: '100%', width: `${b.progress || 0}%`, borderRadius: 999, transition: 'width 0.5s' }} />
-                    </div>
-                  </div>
-                )}
-                {b.notes && <p style={{ fontSize: 12, color: '#666', marginTop: 8, fontStyle: 'italic' }}>{b.notes}</p>}
-                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                  <button onClick={() => openEdit(b)} style={btnSecondary}>✏️ Editar</button>
-                  <button onClick={() => { if (window.confirm('Remover livro?')) books.remove(b.id) }} style={{ ...btnSecondary, color: P.red }}>🗑️</button>
-                </div>
+      <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {sub === 'Livros' && bookList.map(b => (
+          <div key={b.id} onClick={() => openEdit(b)} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: '14px 16px', cursor: 'pointer', boxShadow: '3px 3px 0 black' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 700, fontSize: 15 }}>{b.title}</p>
+                <p style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{b.author}</p>
               </div>
-            ))}
-          </>
-        )}
-        {sub === 'Cursos' && (
-          <>
-            {courses.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhum curso ainda. Adicione um!</p>}
-            {courses.data.map(c => (
-              <div key={c.id} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: 14, marginBottom: 10, boxShadow: '3px 3px 0 black' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 800, fontSize: 15 }}>{c.name}</p>
-                    {c.platform && <p style={{ fontSize: 13, color: '#666', marginTop: 2 }}>{c.platform}</p>}
-                  </div>
-                  <span style={{ background: c.status === 'Concluído' ? '#e6f2ec' : '#e8eef7', color: c.status === 'Concluído' ? P.forest : P.navy, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 20, border: `1.5px solid ${c.status === 'Concluído' ? P.forest : P.navy}`, whiteSpace: 'nowrap', marginLeft: 8 }}>
-                    {c.status}
-                  </span>
-                </div>
-                <div style={{ marginTop: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-                    <span>Progresso</span><span className="font-numbers">{c.progress || 0}%</span>
-                  </div>
-                  <div style={{ background: '#eee', borderRadius: 999, height: 8, overflow: 'hidden' }}>
-                    <div style={{ background: P.navy, height: '100%', width: `${c.progress || 0}%`, borderRadius: 999, transition: 'width 0.5s' }} />
-                  </div>
-                </div>
-                {c.notes && <p style={{ fontSize: 12, color: '#666', marginTop: 8, fontStyle: 'italic' }}>{c.notes}</p>}
-                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                  <button onClick={() => openEdit(c)} style={btnSecondary}>✏️ Editar</button>
-                  <button onClick={() => { if (window.confirm('Remover curso?')) courses.remove(c.id) }} style={{ ...btnSecondary, color: P.red }}>🗑️</button>
-                </div>
+              <Badge label={b.status} color={statusColorBook[b.status] || '#6B7280'} />
+            </div>
+            {b.status === 'Lendo' && <ProgressBar value={b.progress} color={P.navy} />}
+            {b.notes && <p style={{ fontSize: 12, color: '#6B7280', marginTop: 6 }}>{b.notes}</p>}
+          </div>
+        ))}
+        {sub === 'Cursos' && courseList.map(c => (
+          <div key={c.id} onClick={() => openEdit(c)} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: '14px 16px', cursor: 'pointer', boxShadow: '3px 3px 0 black' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 700, fontSize: 15 }}>{c.name}</p>
+                <p style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{c.platform}</p>
               </div>
-            ))}
-          </>
-        )}
+              <Badge label={c.status} color={statusColorCourse[c.status] || '#6B7280'} />
+            </div>
+            <ProgressBar value={c.progress} color={P.navy} />
+            <p style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>{c.progress || 0}% concluído</p>
+            {c.notes && <p style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>{c.notes}</p>}
+          </div>
+        ))}
+        {sub === 'Livros' && bookList.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhum livro cadastrado</p>}
+        {sub === 'Cursos' && courseList.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhum curso cadastrado</p>}
       </div>
 
-      <Modal open={modal === 'add-book' || modal === 'edit-book'} onClose={() => setModal(null)} title={modal === 'edit-book' ? 'Editar Livro' : 'Novo Livro'}>
-        <input style={inputStyle} placeholder="Título *" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-        <input style={inputStyle} placeholder="Autor" value={form.author || ''} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} />
-        <select style={inputStyle} value={form.status || 'quero ler'} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-          <option value="quero ler">Quero ler</option>
-          <option value="lendo">Lendo</option>
-          <option value="lido">Lido</option>
-        </select>
-        <input style={inputStyle} type="number" min="0" max="100" placeholder="Progresso (%)" value={form.progress || ''} onChange={e => setForm(f => ({ ...f, progress: e.target.value }))} />
-        <textarea style={{ ...inputStyle, minHeight: 60 }} placeholder="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-        <button style={btnPrimary(P.navy)} onClick={saveBook}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-course' || modal === 'edit-course'} onClose={() => setModal(null)} title={modal === 'edit-course' ? 'Editar Curso' : 'Novo Curso'}>
-        <input style={inputStyle} placeholder="Nome do curso *" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-        <input style={inputStyle} placeholder="Plataforma (ex: Udemy)" value={form.platform || ''} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))} />
-        <select style={inputStyle} value={form.status || 'Em andamento'} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-          <option value="Não iniciado">Não iniciado</option>
-          <option value="Em andamento">Em andamento</option>
-          <option value="Concluído">Concluído</option>
-        </select>
-        <input style={inputStyle} type="number" min="0" max="100" placeholder="Progresso (%)" value={form.progress || ''} onChange={e => setForm(f => ({ ...f, progress: e.target.value }))} />
-        <textarea style={{ ...inputStyle, minHeight: 60 }} placeholder="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-        <button style={btnPrimary(P.navy)} onClick={saveCourse}>Salvar</button>
+      <Modal open={!!modal} onClose={() => setModal(null)} title={modal === 'add' ? `Novo ${sub === 'Livros' ? 'Livro' : 'Curso'}` : `Editar ${sub === 'Livros' ? 'Livro' : 'Curso'}`}>
+        {sub === 'Livros' ? (
+          <>
+            <Inp label="Título" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+            <Inp label="Autor" value={form.author || ''} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} />
+            <Sel label="Status" value={form.status || 'Quero Ler'} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+              <option>Quero Ler</option><option>Lendo</option><option>Lido</option>
+            </Sel>
+            <Inp label="Progresso (0-100)" type="number" min={0} max={100} value={form.progress || 0} onChange={e => setForm(f => ({ ...f, progress: e.target.value }))} />
+            <Tex label="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+          </>
+        ) : (
+          <>
+            <Inp label="Nome do Curso" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+            <Inp label="Plataforma" value={form.platform || ''} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))} />
+            <Sel label="Status" value={form.status || 'Em andamento'} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+              <option>Em andamento</option><option>Concluído</option><option>Pausado</option>
+            </Sel>
+            <Inp label="Progresso (0-100)" type="number" min={0} max={100} value={form.progress || 0} onChange={e => setForm(f => ({ ...f, progress: e.target.value }))} />
+            <Tex label="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+          </>
+        )}
+        <Btn onClick={save} full color={P.navy}>Salvar</Btn>
+        {modal === 'edit' && <Btn onClick={del} full ghost>Excluir</Btn>}
       </Modal>
     </div>
   )
 }
 
 // ─── TRABALHO TAB ─────────────────────────────────────────────────────────────
-const BRAND_STATUS_COLORS = {
-  'Prospectando':    { bg: '#fef3e2', color: '#B84A2A', border: '#B84A2A' },
-  'Em Onboarding':   { bg: '#e8eef7', color: P.navy, border: P.navy },
-  'Live':            { bg: '#e6f2ec', color: P.forest, border: P.forest },
-  'Pausado':         { bg: '#f2e8ee', color: P.rose, border: P.rose },
-}
-const PIPELINE_STATUS_COLORS = {
-  'Lead':             { bg: '#f5f5f5', color: '#555' },
-  'Contato Feito':    { bg: '#e8eef7', color: P.navy },
-  'Proposta Enviada': { bg: '#fef3e2', color: '#B84A2A' },
-  'Negociando':       { bg: '#f4e8f4', color: P.plum },
-  'Ganho':            { bg: '#e6f2ec', color: P.forest },
-  'Perdido':          { bg: '#fee', color: P.red },
-}
-
-function TrabalhoTab({ userId }) {
+function TrabalhoTab() {
   const [sub, setSub] = useState('Marcas')
-  const brands      = useCol(userId, 'brands')
-  const pipeline    = useCol(userId, 'pipeline')
-  const tasks       = useCol(userId, 'tasks')
-  const careerGoals = useCol(userId, 'careerGoals')
-  const ideas       = useCol(userId, 'ideas')
-
   const [modal, setModal] = useState(null)
-  const [form, setForm]   = useState({})
-  const [expanded, setExpanded] = useState(null)
+  const [form, setForm] = useState({})
+  const [refresh, setRefresh] = useState(0)
 
-  function openAdd(type) { setForm({}); setModal('add-' + type) }
-  function openEdit(type, item) { setForm(item); setModal('edit-' + type) }
+  const brandStatusColor = { 'Prospectando': P.amber, 'Em Onboarding': P.navy, 'Live': P.forest, 'Pausado': '#6B7280' }
+  const pipeStatusColor = { 'Lead': '#6B7280', 'Contato Feito': P.amber, 'Proposta Enviada': P.navy, 'Negociando': P.plum, 'Ganho': P.forest, 'Perdido': P.red }
+  const prioColor = { 'Alta': P.red, 'Média': P.amber, 'Baixa': '#6B7280' }
 
-  async function saveBrand() {
-    if (!form.name) return
-    const d = { name: form.name, sector: form.sector || 'Skincare', status: form.status || 'Prospectando', contact: form.contact || '', gmv: Number(form.gmv || 0), notes: form.notes || '' }
-    if (form.id) await brands.upd(form.id, d)
-    else await brands.add(d)
-    setModal(null)
+  function openAdd() {
+    const defaults = {
+      'Marcas': { status: 'Prospectando', sector: 'Skincare' },
+      'Pipeline': { status: 'Lead', sector: 'Skincare' },
+      'Tarefas': { priority: 'Média', done: false },
+      'Metas': { done: false },
+      'Ideias': {},
+    }
+    setForm(defaults[sub] || {})
+    setModal('add')
   }
 
-  async function savePipeline() {
-    if (!form.brandName) return
-    const d = { brandName: form.brandName, instagram: form.instagram || '', followers: form.followers || '', gmvPotential: Number(form.gmvPotential || 0), status: form.status || 'Lead', notes: form.notes || '', sector: form.sector || '' }
-    if (form.id) await pipeline.upd(form.id, d)
-    else await pipeline.add(d)
-    setModal(null)
+  function openEdit(item) { setForm({ ...item }); setModal('edit') }
+
+  function getKey() {
+    return { 'Marcas': 'avt_brands', 'Pipeline': 'avt_pipeline', 'Tarefas': 'avt_tasks', 'Metas': 'avt_goals_career', 'Ideias': 'avt_ideas' }[sub]
   }
 
-  async function saveTask() {
-    if (!form.text) return
-    const d = { text: form.text, done: false, priority: form.priority || 'média', dueDate: form.dueDate || '' }
-    if (form.id) await tasks.upd(form.id, d)
-    else await tasks.add(d)
-    setModal(null)
+  function save() {
+    const key = getKey()
+    const list = db.get(key, [])
+    if (modal === 'add') db.set(key, [...list, { ...form, id: uid() }])
+    else db.set(key, list.map(i => i.id === form.id ? form : i))
+    setModal(null); setRefresh(r => r + 1)
   }
 
-  async function saveGoal() {
-    if (!form.text) return
-    const d = { text: form.text, done: form.done || false, deadline: form.deadline || '' }
-    if (form.id) await careerGoals.upd(form.id, d)
-    else await careerGoals.add(d)
-    setModal(null)
+  function del() {
+    if (!window.confirm('Excluir?')) return
+    const key = getKey()
+    db.set(key, db.get(key, []).filter(i => i.id !== form.id))
+    setModal(null); setRefresh(r => r + 1)
   }
 
-  async function saveIdea() {
-    if (!form.text) return
-    const d = { text: form.text }
-    if (form.id) await ideas.upd(form.id, d)
-    else await ideas.add(d)
-    setModal(null)
+  function toggleTask(item, key) {
+    const list = db.get(key, [])
+    db.set(key, list.map(i => i.id === item.id ? { ...i, done: !i.done } : i))
+    setRefresh(r => r + 1)
   }
 
-  const priorityOrder = { 'alta': 0, 'média': 1, 'baixa': 2 }
-  const sortedTasks = [...tasks.data].sort((a, b) => (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1))
-  const priorityColor = { 'alta': P.red, 'média': P.amber, 'baixa': P.forest }
-
-  const subAddMap = { Marcas: 'brand', Pipeline: 'pipe', Tarefas: 'task', Metas: 'goal', Ideias: 'idea' }
+  const brands = db.get('avt_brands', [])
+  const pipeline = db.get('avt_pipeline', [])
+  const tasks = db.get('avt_tasks', []).sort((a, b) => { const o = { Alta: 0, Média: 1, Baixa: 2 }; return (o[a.priority] ?? 1) - (o[b.priority] ?? 1) })
+  const goals = db.get('avt_goals_career', [])
+  const ideas = db.get('avt_ideas', [])
 
   return (
-    <div>
-      <TabHeader color={P.forest} emoji="💼" title="Trabalho" subtitle="sua carreira">
-        <button onClick={() => openAdd(subAddMap[sub])} style={{ background: 'white', border: '2px solid black', borderRadius: 12, padding: '6px 14px', fontWeight: 800, fontSize: 20, cursor: 'pointer', boxShadow: '2px 2px 0 black' }}>+</button>
-      </TabHeader>
-      <SubTabs tabs={['Marcas', 'Pipeline', 'Tarefas', 'Metas', 'Ideias']} active={sub} setActive={setSub} color={P.forest} />
+    <div style={{ paddingBottom: 88 }}>
+      <TabHeader color={P.forest} emoji="💼" title="Trabalho" action={
+        <Btn small onClick={openAdd} color="rgba(255,255,255,0.25)" className="border-white border-opacity-50">+ Add</Btn>
+      } />
+      <SubTabs tabs={['Marcas', 'Pipeline', 'Tarefas', 'Metas', 'Ideias']} active={sub} onChange={setSub} color={P.forest} />
 
-      <div style={{ padding: '12px 12px 80px' }}>
-
+      <div style={{ padding: '16px 12px' }}>
         {sub === 'Marcas' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {brands.data.length === 0 && <p style={{ color: '#888', gridColumn: '1/-1', textAlign: 'center', marginTop: 24 }}>Nenhuma marca. Adicione uma!</p>}
-            {brands.data.map(b => {
-              const sc = BRAND_STATUS_COLORS[b.status] || { bg: '#eee', color: '#555', border: '#ccc' }
-              return (
-                <div key={b.id} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: 12, boxShadow: '3px 3px 0 black', cursor: 'pointer' }} onClick={() => setExpanded(expanded === b.id ? null : b.id)}>
-                  <p style={{ fontWeight: 800, fontSize: 14 }}>{b.name}</p>
-                  <p style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{b.sector}</p>
-                  <span style={{ display: 'inline-block', marginTop: 6, background: sc.bg, color: sc.color, border: `1.5px solid ${sc.border}`, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>{b.status}</span>
-                  {expanded === b.id && (
-                    <div style={{ marginTop: 10 }}>
-                      {b.contact && <p style={{ fontSize: 12, color: '#555' }}>📞 {b.contact}</p>}
-                      {b.gmv > 0 && <p style={{ fontSize: 12, color: P.forest, fontWeight: 700, marginTop: 4 }}>GMV: {fmtBRL(b.gmv)}</p>}
-                      {b.notes && <p style={{ fontSize: 12, color: '#666', marginTop: 4, fontStyle: 'italic' }}>{b.notes}</p>}
-                      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                        <button onClick={e => { e.stopPropagation(); openEdit('brand', b) }} style={btnSecondary}>✏️</button>
-                        <button onClick={e => { e.stopPropagation(); if (window.confirm('Remover marca?')) brands.remove(b.id) }} style={{ ...btnSecondary, color: P.red }}>🗑️</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+            {brands.map(b => (
+              <div key={b.id} onClick={() => openEdit(b)} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: '14px 12px', cursor: 'pointer', boxShadow: '3px 3px 0 black' }}>
+                <p style={{ fontWeight: 800, fontSize: 14, marginBottom: 6 }}>{b.name}</p>
+                <Badge label={b.status} color={brandStatusColor[b.status] || '#6B7280'} />
+                <p style={{ fontSize: 11, color: '#6B7280', marginTop: 6 }}>{b.sector}</p>
+                {b.gmv ? <p style={{ fontSize: 12, fontWeight: 700, color: P.forest, marginTop: 4 }}>GMV: {money(b.gmv)}</p> : null}
+              </div>
+            ))}
+            {brands.length === 0 && <p style={{ color: '#9CA3AF', gridColumn: 'span 2', textAlign: 'center', padding: 32 }}>Nenhuma marca cadastrada</p>}
           </div>
         )}
-
         {sub === 'Pipeline' && (
-          <>
-            {pipeline.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Pipeline vazio. Adicione um lead!</p>}
-            {pipeline.data.map(p => {
-              const sc = PIPELINE_STATUS_COLORS[p.status] || { bg: '#eee', color: '#555' }
-              return (
-                <div key={p.id} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: 14, marginBottom: 10, boxShadow: '3px 3px 0 black' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <p style={{ fontWeight: 800, fontSize: 15 }}>{p.brandName}</p>
-                      {p.instagram && <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>@{p.instagram}</p>}
-                    </div>
-                    <span style={{ background: sc.bg, color: sc.color, fontSize: 10, fontWeight: 700, padding: '3px 9px', borderRadius: 20, border: `1.5px solid ${sc.color}`, whiteSpace: 'nowrap', marginLeft: 8 }}>{p.status}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {pipeline.map(p => (
+              <div key={p.id} onClick={() => openEdit(p)} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: '14px 16px', cursor: 'pointer', boxShadow: '3px 3px 0 black' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <p style={{ fontWeight: 800, fontSize: 15 }}>{p.brandName}</p>
+                    {p.instagram && <p style={{ fontSize: 12, color: P.plum, marginTop: 2 }}>@{p.instagram}</p>}
+                    {p.followers && <p style={{ fontSize: 11, color: '#6B7280' }}>{fmtFollowers(p.followers)} seguidores</p>}
+                    {p.gmvPotential ? <p style={{ fontSize: 12, fontWeight: 700, color: P.forest, marginTop: 4 }}>Potencial: {money(p.gmvPotential)}</p> : null}
                   </div>
-                  <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                    {p.followers && <span style={{ fontSize: 12, color: '#555' }}>👥 {p.followers}</span>}
-                    {p.gmvPotential > 0 && <span style={{ fontSize: 12, color: P.forest, fontWeight: 700 }}>{fmtBRL(p.gmvPotential)}</span>}
-                    {p.sector && <span style={{ fontSize: 12, color: '#555' }}>{p.sector}</span>}
-                  </div>
-                  {p.notes && <p style={{ fontSize: 12, color: '#666', marginTop: 6, fontStyle: 'italic' }}>{p.notes}</p>}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                    <button onClick={() => openEdit('pipe', p)} style={btnSecondary}>✏️ Editar</button>
-                    <button onClick={() => { if (window.confirm('Remover?')) pipeline.remove(p.id) }} style={{ ...btnSecondary, color: P.red }}>🗑️</button>
-                  </div>
+                  <Badge label={p.status} color={pipeStatusColor[p.status] || '#6B7280'} />
                 </div>
-              )
-            })}
-          </>
+              </div>
+            ))}
+            {pipeline.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Pipeline vazio</p>}
+          </div>
         )}
-
         {sub === 'Tarefas' && (
-          <>
-            {sortedTasks.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhuma tarefa. Adicione uma!</p>}
-            {sortedTasks.map(t => (
-              <div key={t.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '10px 14px', marginBottom: 8, boxShadow: '2px 2px 0 black', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="checkbox" checked={!!t.done} onChange={e => tasks.upd(t.id, { done: e.target.checked })} style={{ width: 18, height: 18, accentColor: P.forest, cursor: 'pointer', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 700, fontSize: 14, textDecoration: t.done ? 'line-through' : 'none', color: t.done ? '#aaa' : P.dark }}>{t.text}</p>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                    <span style={{ fontSize: 11, color: priorityColor[t.priority] || P.dark, fontWeight: 700 }}>● {t.priority}</span>
-                    {t.dueDate && <span style={{ fontSize: 11, color: '#888' }}>📅 {t.dueDate}</span>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {tasks.map(t => (
+              <div key={t.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '2px 2px 0 black' }}>
+                <input type="checkbox" checked={!!t.done} onChange={() => toggleTask(t, 'avt_tasks')} style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0 }} />
+                <div style={{ flex: 1 }} onClick={() => openEdit(t)}>
+                  <p style={{ fontSize: 14, fontWeight: 600, textDecoration: t.done ? 'line-through' : 'none', color: t.done ? '#9CA3AF' : P.dark }}>{t.text}</p>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+                    <Badge label={t.priority} color={prioColor[t.priority] || '#6B7280'} />
+                    {t.dueDate && <span style={{ fontSize: 11, color: '#6B7280' }}>{fmtDate(t.dueDate)}</span>}
                   </div>
                 </div>
-                <button onClick={() => openEdit('task', t)} style={{ ...btnSecondary, padding: '4px 8px' }}>✏️</button>
-                <button onClick={() => { if (window.confirm('Remover?')) tasks.remove(t.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
               </div>
             ))}
-          </>
+            {tasks.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhuma tarefa</p>}
+          </div>
         )}
-
         {sub === 'Metas' && (
-          <>
-            {careerGoals.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhuma meta. Adicione uma!</p>}
-            {careerGoals.data.map(g => (
-              <div key={g.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '10px 14px', marginBottom: 8, boxShadow: '2px 2px 0 black', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="checkbox" checked={!!g.done} onChange={e => careerGoals.upd(g.id, { done: e.target.checked })} style={{ width: 18, height: 18, accentColor: P.forest, cursor: 'pointer', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 700, fontSize: 14, textDecoration: g.done ? 'line-through' : 'none', color: g.done ? '#aaa' : P.dark }}>{g.text}</p>
-                  {g.deadline && <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Prazo: {g.deadline}</p>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {goals.map(g => (
+              <div key={g.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '2px 2px 0 black' }}>
+                <input type="checkbox" checked={!!g.done} onChange={() => toggleTask(g, 'avt_goals_career')} style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0 }} />
+                <div style={{ flex: 1 }} onClick={() => openEdit(g)}>
+                  <p style={{ fontSize: 14, fontWeight: 600, textDecoration: g.done ? 'line-through' : 'none', color: g.done ? '#9CA3AF' : P.dark }}>{g.text}</p>
+                  {g.deadline && <p style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>Prazo: {fmtDate(g.deadline)}</p>}
                 </div>
-                <button onClick={() => openEdit('goal', g)} style={{ ...btnSecondary, padding: '4px 8px' }}>✏️</button>
-                <button onClick={() => { if (window.confirm('Remover?')) careerGoals.remove(g.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
               </div>
             ))}
-          </>
+            {goals.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhuma meta de carreira</p>}
+          </div>
         )}
-
         {sub === 'Ideias' && (
-          <>
-            {ideas.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhuma ideia. Adicione uma!</p>}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              {ideas.data.map(i => (
-                <div key={i.id} style={{ background: '#fffde7', border: '2px solid #f0c040', borderRadius: 14, padding: 12, boxShadow: '3px 3px 0 #f0c040' }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4 }}>{i.text}</p>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                    <button onClick={() => openEdit('idea', i)} style={{ ...btnSecondary, padding: '3px 8px', fontSize: 12 }}>✏️</button>
-                    <button onClick={() => { if (window.confirm('Remover?')) ideas.remove(i.id) }} style={{ ...btnSecondary, padding: '3px 8px', fontSize: 12, color: P.red }}>🗑️</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {ideas.map(i => (
+              <div key={i.id} onClick={() => openEdit(i)} style={{ background: P.cream, border: '2px solid black', borderRadius: 14, padding: '12px 12px', cursor: 'pointer', boxShadow: '2px 2px 0 black' }}>
+                <p style={{ fontSize: 13, color: P.dark }}>{i.text}</p>
+              </div>
+            ))}
+            {ideas.length === 0 && <p style={{ color: '#9CA3AF', gridColumn: 'span 2', textAlign: 'center', padding: 32 }}>Nenhuma ideia</p>}
+          </div>
         )}
       </div>
 
-      <Modal open={modal === 'add-brand' || modal === 'edit-brand'} onClose={() => setModal(null)} title={modal === 'edit-brand' ? 'Editar Marca' : 'Nova Marca'}>
-        <input style={inputStyle} placeholder="Nome da marca *" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-        <select style={inputStyle} value={form.sector || 'Skincare'} onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}>
-          {['Skincare','Makeup','Haircare','Fragrance','Wellness','Outro'].map(s => <option key={s}>{s}</option>)}
-        </select>
-        <select style={inputStyle} value={form.status || 'Prospectando'} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-          {['Prospectando','Em Onboarding','Live','Pausado'].map(s => <option key={s}>{s}</option>)}
-        </select>
-        <input style={inputStyle} placeholder="Contato (email/tel)" value={form.contact || ''} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} />
-        <input style={inputStyle} type="number" placeholder="GMV (R$)" value={form.gmv || ''} onChange={e => setForm(f => ({ ...f, gmv: e.target.value }))} />
-        <textarea style={{ ...inputStyle, minHeight: 60 }} placeholder="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-        <button style={btnPrimary(P.forest)} onClick={saveBrand}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-pipe' || modal === 'edit-pipe'} onClose={() => setModal(null)} title={modal === 'edit-pipe' ? 'Editar Lead' : 'Novo Lead'}>
-        <input style={inputStyle} placeholder="Nome da marca *" value={form.brandName || ''} onChange={e => setForm(f => ({ ...f, brandName: e.target.value }))} />
-        <input style={inputStyle} placeholder="Instagram (sem @)" value={form.instagram || ''} onChange={e => setForm(f => ({ ...f, instagram: e.target.value }))} />
-        <input style={inputStyle} placeholder="Seguidores (ex: 50k)" value={form.followers || ''} onChange={e => setForm(f => ({ ...f, followers: e.target.value }))} />
-        <input style={inputStyle} type="number" placeholder="GMV Potencial (R$)" value={form.gmvPotential || ''} onChange={e => setForm(f => ({ ...f, gmvPotential: e.target.value }))} />
-        <select style={inputStyle} value={form.status || 'Lead'} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-          {Object.keys(PIPELINE_STATUS_COLORS).map(s => <option key={s}>{s}</option>)}
-        </select>
-        <input style={inputStyle} placeholder="Setor" value={form.sector || ''} onChange={e => setForm(f => ({ ...f, sector: e.target.value }))} />
-        <textarea style={{ ...inputStyle, minHeight: 60 }} placeholder="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-        <button style={btnPrimary(P.forest)} onClick={savePipeline}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-task' || modal === 'edit-task'} onClose={() => setModal(null)} title={modal === 'edit-task' ? 'Editar Tarefa' : 'Nova Tarefa'}>
-        <input style={inputStyle} placeholder="Tarefa *" value={form.text || ''} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
-        <select style={inputStyle} value={form.priority || 'média'} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
-          <option value="alta">Alta</option>
-          <option value="média">Média</option>
-          <option value="baixa">Baixa</option>
-        </select>
-        <input style={inputStyle} type="date" placeholder="Prazo" value={form.dueDate || ''} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} />
-        <button style={btnPrimary(P.forest)} onClick={saveTask}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-goal' || modal === 'edit-goal'} onClose={() => setModal(null)} title={modal === 'edit-goal' ? 'Editar Meta' : 'Nova Meta'}>
-        <input style={inputStyle} placeholder="Meta de carreira *" value={form.text || ''} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
-        <input style={inputStyle} type="date" placeholder="Prazo" value={form.deadline || ''} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
-        <button style={btnPrimary(P.forest)} onClick={saveGoal}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-idea' || modal === 'edit-idea'} onClose={() => setModal(null)} title={modal === 'edit-idea' ? 'Editar Ideia' : 'Nova Ideia'}>
-        <textarea style={{ ...inputStyle, minHeight: 80 }} placeholder="Sua ideia..." value={form.text || ''} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
-        <button style={btnPrimary(P.forest)} onClick={saveIdea}>Salvar</button>
+      <Modal open={!!modal} onClose={() => setModal(null)} title={modal === 'add' ? 'Novo item' : 'Editar'}>
+        {sub === 'Marcas' && <>
+          <Inp label="Nome da marca" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+          <Sel label="Setor" value={form.sector || 'Skincare'} onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}>
+            <option>Skincare</option><option>Makeup</option><option>Haircare</option><option>Fragrance</option><option>Wellness</option><option>Outro</option>
+          </Sel>
+          <Sel label="Status" value={form.status || 'Prospectando'} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+            <option>Prospectando</option><option>Em Onboarding</option><option>Live</option><option>Pausado</option>
+          </Sel>
+          <Inp label="Contato" value={form.contact || ''} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} />
+          <Inp label="GMV (R$)" type="number" value={form.gmv || ''} onChange={e => setForm(f => ({ ...f, gmv: e.target.value }))} />
+          <Tex label="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+        </>}
+        {sub === 'Pipeline' && <>
+          <Inp label="Nome da marca" value={form.brandName || ''} onChange={e => setForm(f => ({ ...f, brandName: e.target.value }))} />
+          <Inp label="Instagram (sem @)" value={form.instagram || ''} onChange={e => setForm(f => ({ ...f, instagram: e.target.value }))} />
+          <Inp label="Seguidores" type="number" value={form.followers || ''} onChange={e => setForm(f => ({ ...f, followers: e.target.value }))} />
+          <Inp label="GMV Potencial (R$)" type="number" value={form.gmvPotential || ''} onChange={e => setForm(f => ({ ...f, gmvPotential: e.target.value }))} />
+          <Sel label="Setor" value={form.sector || 'Skincare'} onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}>
+            <option>Skincare</option><option>Makeup</option><option>Haircare</option><option>Fragrance</option><option>Wellness</option><option>Outro</option>
+          </Sel>
+          <Sel label="Status" value={form.status || 'Lead'} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+            <option>Lead</option><option>Contato Feito</option><option>Proposta Enviada</option><option>Negociando</option><option>Ganho</option><option>Perdido</option>
+          </Sel>
+          <Tex label="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+        </>}
+        {sub === 'Tarefas' && <>
+          <Inp label="Tarefa" value={form.text || ''} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
+          <Sel label="Prioridade" value={form.priority || 'Média'} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}>
+            <option>Alta</option><option>Média</option><option>Baixa</option>
+          </Sel>
+          <Inp label="Prazo" type="date" value={form.dueDate || ''} onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} />
+        </>}
+        {sub === 'Metas' && <>
+          <Inp label="Meta" value={form.text || ''} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
+          <Inp label="Prazo" type="date" value={form.deadline || ''} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
+        </>}
+        {sub === 'Ideias' && <>
+          <Tex label="Ideia" value={form.text || ''} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
+        </>}
+        <Btn onClick={save} full color={P.forest}>Salvar</Btn>
+        {modal === 'edit' && <Btn onClick={del} full ghost>Excluir</Btn>}
       </Modal>
     </div>
   )
 }
 
 // ─── VIDA TAB ─────────────────────────────────────────────────────────────────
-const LIFE_GOAL_CATEGORIES = ['Carreira', 'Saúde', 'Relacionamentos', 'Finanças', 'Pessoal', 'Viagens']
-const CATEGORY_COLORS = {
-  'Carreira':        P.forest,
-  'Saúde':           P.teal,
-  'Relacionamentos': P.rose,
-  'Finanças':        P.plum,
-  'Pessoal':         P.navy,
-  'Viagens':         P.amber,
-}
-const MOOD_EMOJIS = ['😄', '😊', '😐', '😔', '😠']
-
-function VidaTab({ userId }) {
+function VidaTab() {
   const [sub, setSub] = useState('Hábitos')
-  const habits       = useCol(userId, 'habits')
-  const habitLogs    = useCol(userId, 'habitLogs')
-  const lifeGoals    = useCol(userId, 'lifeGoals')
-  const moods        = useCol(userId, 'moods')
-  const appointments = useCol(userId, 'appointments')
+  const [modal, setModal] = useState(null)
+  const [form, setForm] = useState({})
+  const [refresh, setRefresh] = useState(0)
 
-  const [modal, setModal]         = useState(null)
-  const [form, setForm]           = useState({})
-  const [animating, setAnimating] = useState(null)
+  const catColor = { 'Carreira': P.navy, 'Saúde': P.forest, 'Relacionamentos': P.rose, 'Finanças': P.plum, 'Pessoal': P.amber, 'Viagens': P.teal }
+  const moodEmojis = ['😄', '😊', '😐', '😔', '😠']
 
-  const todayStr = today()
-
-  function streak(habitId) {
-    let s = 0
-    const d = new Date()
-    while (true) {
-      const ds = d.toISOString().split('T')[0]
-      const done = habitLogs.data.find(l => l.habitId === habitId && l.date === ds && l.done)
-      if (!done) break
-      s++
-      d.setDate(d.getDate() - 1)
+  function openAdd() {
+    const defaults = {
+      'Hábitos': { frequency: 'Diário', emoji: '✨' },
+      'Metas': { done: false, category: 'Pessoal' },
+      'Humor': { emoji: '😊', date: today() },
+      'Consultas': { date: today() },
     }
-    return s
+    setForm(defaults[sub] || {})
+    setModal('add')
   }
 
-  function isHabitDoneToday(habitId) {
-    return habitLogs.data.some(l => l.habitId === habitId && l.date === todayStr && l.done)
+  function openEdit(item) { setForm({ ...item }); setModal('edit') }
+
+  function getKey() {
+    return { 'Hábitos': 'avt_habits', 'Metas': 'avt_life_goals', 'Humor': 'avt_moods', 'Consultas': 'avt_appointments' }[sub]
   }
 
-  async function toggleHabit(habitId) {
-    const done = isHabitDoneToday(habitId)
-    const existing = habitLogs.data.find(l => l.habitId === habitId && l.date === todayStr)
-    setAnimating(habitId)
-    setTimeout(() => setAnimating(null), 300)
-    if (existing) {
-      await habitLogs.upd(existing.id, { done: !done })
-    } else {
-      await habitLogs.add({ habitId, date: todayStr, done: true })
+  function save() {
+    const key = getKey()
+    const list = db.get(key, [])
+    if (modal === 'add') db.set(key, [...list, { ...form, id: uid() }])
+    else db.set(key, list.map(i => i.id === form.id ? form : i))
+    setModal(null); setRefresh(r => r + 1)
+  }
+
+  function del() {
+    if (!window.confirm('Excluir?')) return
+    const key = getKey()
+    db.set(key, db.get(key, []).filter(i => i.id !== form.id))
+    setModal(null); setRefresh(r => r + 1)
+  }
+
+  function toggleHabit(habitId) {
+    const logs = db.get('avt_habit_logs', {})
+    const todayLogs = logs[today()] || []
+    const updated = todayLogs.includes(habitId) ? todayLogs.filter(id => id !== habitId) : [...todayLogs, habitId]
+    db.set('avt_habit_logs', { ...logs, [today()]: updated })
+    setRefresh(r => r + 1)
+  }
+
+  function getStreak(habitId) {
+    const logs = db.get('avt_habit_logs', {})
+    let streak = 0
+    let d = new Date()
+    for (let i = 0; i < 365; i++) {
+      const key = d.toISOString().split('T')[0]
+      if ((logs[key] || []).includes(habitId)) { streak++; d.setDate(d.getDate() - 1) }
+      else break
     }
+    return streak
   }
 
-  async function saveHabit() {
-    if (!form.name) return
-    const d = { name: form.name, emoji: form.emoji || '✅', frequency: form.frequency || 'daily' }
-    if (form.id) await habits.upd(form.id, d)
-    else await habits.add(d)
-    setModal(null)
+  function toggleGoal(item) {
+    const list = db.get('avt_life_goals', [])
+    db.set('avt_life_goals', list.map(i => i.id === item.id ? { ...i, done: !i.done } : i))
+    setRefresh(r => r + 1)
   }
 
-  async function saveLifeGoal() {
-    if (!form.text) return
-    const d = { text: form.text, done: form.done || false, category: form.category || 'Pessoal' }
-    if (form.id) await lifeGoals.upd(form.id, d)
-    else await lifeGoals.add(d)
-    setModal(null)
-  }
+  const habits = db.get('avt_habits', [])
+  const habitLogs = db.get('avt_habit_logs', {})
+  const todayLog = habitLogs[today()] || []
+  const lifeGoals = db.get('avt_life_goals', [])
+  const moods = db.get('avt_moods', []).sort((a, b) => b.date > a.date ? 1 : -1)
+  const appointments = db.get('avt_appointments', []).sort((a, b) => a.date > b.date ? 1 : -1)
 
-  async function saveMood() {
-    if (!form.emoji) return
-    const d = { date: form.date || todayStr, emoji: form.emoji, note: form.note || '' }
-    if (form.id) await moods.upd(form.id, d)
-    else await moods.add(d)
-    setModal(null)
-  }
+  const goalsByCategory = {}
+  lifeGoals.forEach(g => { if (!goalsByCategory[g.category]) goalsByCategory[g.category] = []; goalsByCategory[g.category].push(g) })
 
-  async function saveAppointment() {
-    if (!form.title) return
-    const d = { title: form.title, doctor: form.doctor || '', date: form.date || '', notes: form.notes || '' }
-    if (form.id) await appointments.upd(form.id, d)
-    else await appointments.add(d)
-    setModal(null)
-  }
-
-  const groupedGoals = LIFE_GOAL_CATEGORIES.reduce((acc, cat) => {
-    const items = lifeGoals.data.filter(g => g.category === cat)
-    if (items.length) acc[cat] = items
-    return acc
-  }, {})
-
-  const sortedAppointments = [...appointments.data].sort((a, b) => (a.date || '').localeCompare(b.date || ''))
-
-  const subAddMap = { 'Hábitos': 'habit', 'Metas': 'lifegoal', 'Humor': 'mood', 'Consultas': 'appt' }
+  const now = today()
+  const upcomingApps = appointments.filter(a => a.date >= now)
+  const pastApps = appointments.filter(a => a.date < now)
 
   return (
-    <div>
-      <TabHeader color={P.rose} emoji="🌸" title="Vida" subtitle="seu bem-estar">
-        <button onClick={() => { setForm({}); setModal('add-' + subAddMap[sub]) }} style={{ background: 'white', border: '2px solid black', borderRadius: 12, padding: '6px 14px', fontWeight: 800, fontSize: 20, cursor: 'pointer', boxShadow: '2px 2px 0 black' }}>+</button>
-      </TabHeader>
-      <SubTabs tabs={['Hábitos', 'Metas', 'Humor', 'Consultas']} active={sub} setActive={setSub} color={P.rose} />
+    <div style={{ paddingBottom: 88 }}>
+      <TabHeader color={P.rose} emoji="🌸" title="Vida" action={
+        <Btn small onClick={openAdd} color="rgba(255,255,255,0.25)" className="border-white border-opacity-50">+ Add</Btn>
+      } />
+      <SubTabs tabs={['Hábitos', 'Metas', 'Humor', 'Consultas']} active={sub} onChange={setSub} color={P.rose} />
 
-      <div style={{ padding: '12px 12px 80px' }}>
-
+      <div style={{ padding: '16px 12px' }}>
         {sub === 'Hábitos' && (
-          <>
-            <p style={{ fontSize: 13, fontWeight: 700, color: '#888', marginBottom: 10 }}>HOJE — {todayStr}</p>
-            {habits.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhum hábito. Adicione um!</p>}
-            {habits.data.map(h => {
-              const done = isHabitDoneToday(h.id)
-              const s = streak(h.id)
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {habits.map(h => {
+              const done = todayLog.includes(h.id)
+              const streak = getStreak(h.id)
               return (
-                <div key={h.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '12px 14px', marginBottom: 8, boxShadow: '2px 2px 0 black', display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button
-                    className={animating === h.id ? 'pop' : ''}
-                    onClick={() => toggleHabit(h.id)}
-                    style={{
-                      width: 36, height: 36, borderRadius: '50%',
-                      background: done ? P.rose : 'white',
-                      border: `2.5px solid ${done ? P.rose : '#ccc'}`,
-                      fontSize: 18, cursor: 'pointer', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {done ? '✓' : (h.emoji || '○')}
-                  </button>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 700, fontSize: 14, textDecoration: done ? 'line-through' : 'none', color: done ? '#aaa' : P.dark }}>{h.name}</p>
-                    <p style={{ fontSize: 12, color: P.rose, marginTop: 2 }}>🔥 {s} dia{s !== 1 ? 's' : ''} seguidos · {h.frequency === 'daily' ? 'diário' : 'semanal'}</p>
+                <div key={h.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '2px 2px 0 black' }}>
+                  <input type="checkbox" checked={done} onChange={() => toggleHabit(h.id)} style={{ width: 20, height: 20, cursor: 'pointer', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }} onClick={() => openEdit(h)}>
+                    <p style={{ fontSize: 15, fontWeight: 600 }}>{h.emoji} {h.name}</p>
+                    <p style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>{h.frequency} · 🔥 {streak} dias</p>
                   </div>
-                  <button onClick={() => { setForm(h); setModal('edit-habit') }} style={{ ...btnSecondary, padding: '4px 8px' }}>✏️</button>
-                  <button onClick={() => { if (window.confirm('Remover hábito?')) habits.remove(h.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
                 </div>
               )
             })}
-          </>
+            {habits.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhum hábito cadastrado</p>}
+          </div>
         )}
-
         {sub === 'Metas' && (
-          <>
-            {Object.keys(groupedGoals).length === 0 && lifeGoals.data.length === 0 && (
-              <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhuma meta. Adicione uma!</p>
-            )}
-            {Object.entries(groupedGoals).map(([cat, items]) => (
-              <div key={cat} style={{ marginBottom: 16 }}>
-                <span style={{ display: 'inline-block', background: CATEGORY_COLORS[cat] || P.navy, color: 'white', fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, marginBottom: 8 }}>{cat}</span>
-                {items.map(g => (
-                  <div key={g.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '10px 14px', marginBottom: 8, boxShadow: '2px 2px 0 black', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input type="checkbox" checked={!!g.done} onChange={e => lifeGoals.upd(g.id, { done: e.target.checked })} style={{ width: 18, height: 18, accentColor: CATEGORY_COLORS[cat] || P.navy, cursor: 'pointer', flexShrink: 0 }} />
-                    <p style={{ flex: 1, fontWeight: 600, fontSize: 14, textDecoration: g.done ? 'line-through' : 'none', color: g.done ? '#aaa' : P.dark }}>{g.text}</p>
-                    <button onClick={() => { setForm(g); setModal('edit-lifegoal') }} style={{ ...btnSecondary, padding: '4px 8px' }}>✏️</button>
-                    <button onClick={() => { if (window.confirm('Remover?')) lifeGoals.remove(g.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {Object.entries(goalsByCategory).map(([cat, items]) => (
+              <div key={cat}>
+                <p style={{ fontWeight: 800, fontSize: 13, color: catColor[cat] || P.dark, marginBottom: 6, letterSpacing: 1, textTransform: 'uppercase' }}>{cat}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {items.map(g => (
+                    <div key={g.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '2px 2px 0 black' }}>
+                      <input type="checkbox" checked={!!g.done} onChange={() => toggleGoal(g)} style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0 }} />
+                      <p style={{ fontSize: 14, flex: 1, textDecoration: g.done ? 'line-through' : 'none', color: g.done ? '#9CA3AF' : P.dark, cursor: 'pointer' }} onClick={() => openEdit(g)}>{g.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {lifeGoals.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhuma meta de vida</p>}
+          </div>
+        )}
+        {sub === 'Humor' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {moods.map(m => (
+              <div key={m.id} onClick={() => openEdit(m)} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '2px 2px 0 black', cursor: 'pointer' }}>
+                <span style={{ fontSize: 28 }}>{m.emoji}</span>
+                <div>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>{fmtDate(m.date)}</p>
+                  {m.note && <p style={{ fontSize: 13, marginTop: 2 }}>{m.note}</p>}
+                </div>
+              </div>
+            ))}
+            {moods.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhum registro de humor</p>}
+          </div>
+        )}
+        {sub === 'Consultas' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {upcomingApps.length > 0 && (
+              <div>
+                <p style={{ fontWeight: 800, fontSize: 12, color: P.navy, marginBottom: 6, letterSpacing: 1, textTransform: 'uppercase' }}>Próximas</p>
+                {upcomingApps.map(a => (
+                  <div key={a.id} onClick={() => openEdit(a)} style={{ background: 'white', border: `2px solid ${P.navy}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8, cursor: 'pointer', boxShadow: '2px 2px 0 black' }}>
+                    <p style={{ fontWeight: 700, fontSize: 15 }}>{a.title}</p>
+                    {a.doctor && <p style={{ fontSize: 12, color: '#6B7280' }}>{a.doctor}</p>}
+                    <p style={{ fontSize: 12, color: P.navy, fontWeight: 700, marginTop: 4 }}>{fmtDate(a.date)}</p>
+                    {a.notes && <p style={{ fontSize: 12, color: '#6B7280', marginTop: 4 }}>{a.notes}</p>}
                   </div>
                 ))}
               </div>
-            ))}
-            {lifeGoals.data.filter(g => !LIFE_GOAL_CATEGORIES.includes(g.category)).map(g => (
-              <div key={g.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '10px 14px', marginBottom: 8, boxShadow: '2px 2px 0 black', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input type="checkbox" checked={!!g.done} onChange={e => lifeGoals.upd(g.id, { done: e.target.checked })} style={{ width: 18, height: 18, accentColor: P.navy, cursor: 'pointer', flexShrink: 0 }} />
-                <p style={{ flex: 1, fontWeight: 600, fontSize: 14, textDecoration: g.done ? 'line-through' : 'none', color: g.done ? '#aaa' : P.dark }}>{g.text}</p>
-                <button onClick={() => { setForm(g); setModal('edit-lifegoal') }} style={{ ...btnSecondary, padding: '4px 8px' }}>✏️</button>
-                <button onClick={() => { if (window.confirm('Remover?')) lifeGoals.remove(g.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
-              </div>
-            ))}
-          </>
-        )}
-
-        {sub === 'Humor' && (
-          <>
-            {moods.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhum registro. Como está se sentindo?</p>}
-            {[...moods.data].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(m => (
-              <div key={m.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '12px 14px', marginBottom: 8, boxShadow: '2px 2px 0 black', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ fontSize: 32 }}>{m.emoji}</span>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 700, fontSize: 14 }}>{m.date}</p>
-                  {m.note && <p style={{ fontSize: 13, color: '#666', marginTop: 2 }}>{m.note}</p>}
-                </div>
-                <button onClick={() => { if (window.confirm('Remover?')) moods.remove(m.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
-              </div>
-            ))}
-          </>
-        )}
-
-        {sub === 'Consultas' && (
-          <>
-            {sortedAppointments.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhuma consulta. Adicione uma!</p>}
-            {sortedAppointments.map(a => {
-              const upcoming = a.date && a.date >= todayStr
-              return (
-                <div key={a.id} style={{ background: upcoming ? '#e8eef7' : 'white', border: `2px solid ${upcoming ? P.navy : '#ccc'}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8, boxShadow: '2px 2px 0 black' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <p style={{ fontWeight: 800, fontSize: 15 }}>{a.title}</p>
-                      {a.doctor && <p style={{ fontSize: 13, color: '#666', marginTop: 2 }}>Dr(a). {a.doctor}</p>}
-                    </div>
-                    {a.date && <span style={{ fontSize: 13, fontWeight: 700, color: upcoming ? P.navy : '#aaa' }}>📅 {a.date}</span>}
+            )}
+            {pastApps.length > 0 && (
+              <div>
+                <p style={{ fontWeight: 800, fontSize: 12, color: '#6B7280', marginBottom: 6, letterSpacing: 1, textTransform: 'uppercase' }}>Passadas</p>
+                {pastApps.map(a => (
+                  <div key={a.id} onClick={() => openEdit(a)} style={{ background: '#F9FAFB', border: '2px solid #E5E7EB', borderRadius: 14, padding: '12px 14px', marginBottom: 8, cursor: 'pointer' }}>
+                    <p style={{ fontWeight: 700, fontSize: 14, color: '#6B7280' }}>{a.title}</p>
+                    {a.doctor && <p style={{ fontSize: 12, color: '#9CA3AF' }}>{a.doctor}</p>}
+                    <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>{fmtDate(a.date)}</p>
                   </div>
-                  {a.notes && <p style={{ fontSize: 12, color: '#666', marginTop: 6, fontStyle: 'italic' }}>{a.notes}</p>}
-                  <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                    <button onClick={() => { setForm(a); setModal('edit-appt') }} style={btnSecondary}>✏️ Editar</button>
-                    <button onClick={() => { if (window.confirm('Remover?')) appointments.remove(a.id) }} style={{ ...btnSecondary, color: P.red }}>🗑️</button>
-                  </div>
-                </div>
-              )
-            })}
-          </>
+                ))}
+              </div>
+            )}
+            {appointments.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhuma consulta</p>}
+          </div>
         )}
       </div>
 
-      <Modal open={modal === 'add-habit' || modal === 'edit-habit'} onClose={() => setModal(null)} title={modal === 'edit-habit' ? 'Editar Hábito' : 'Novo Hábito'}>
-        <input style={inputStyle} placeholder="Nome do hábito *" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-        <input style={inputStyle} placeholder="Emoji (ex: 💪)" value={form.emoji || ''} onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))} />
-        <select style={inputStyle} value={form.frequency || 'daily'} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}>
-          <option value="daily">Diário</option>
-          <option value="weekly">Semanal</option>
-        </select>
-        <button style={btnPrimary(P.rose)} onClick={saveHabit}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-lifegoal' || modal === 'edit-lifegoal'} onClose={() => setModal(null)} title={modal === 'edit-lifegoal' ? 'Editar Meta' : 'Nova Meta de Vida'}>
-        <input style={inputStyle} placeholder="Meta *" value={form.text || ''} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
-        <select style={inputStyle} value={form.category || 'Pessoal'} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-          {LIFE_GOAL_CATEGORIES.map(c => <option key={c}>{c}</option>)}
-        </select>
-        <button style={btnPrimary(P.rose)} onClick={saveLifeGoal}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-mood' || modal === 'edit-mood'} onClose={() => setModal(null)} title="Registrar Humor">
-        <input style={inputStyle} type="date" value={form.date || todayStr} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 12 }}>
-          {MOOD_EMOJIS.map(e => (
-            <button
-              key={e}
-              onClick={() => setForm(f => ({ ...f, emoji: e }))}
-              style={{ fontSize: 32, background: form.emoji === e ? '#fce4ec' : 'transparent', border: `2px solid ${form.emoji === e ? P.rose : '#eee'}`, borderRadius: 12, padding: '4px 8px', cursor: 'pointer' }}
-            >{e}</button>
-          ))}
-        </div>
-        <textarea style={{ ...inputStyle, minHeight: 60 }} placeholder="Como foi seu dia?" value={form.note || ''} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
-        <button style={btnPrimary(P.rose)} onClick={saveMood}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-appt' || modal === 'edit-appt'} onClose={() => setModal(null)} title={modal === 'edit-appt' ? 'Editar Consulta' : 'Nova Consulta'}>
-        <input style={inputStyle} placeholder="Tipo de consulta *" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-        <input style={inputStyle} placeholder="Médico/Profissional" value={form.doctor || ''} onChange={e => setForm(f => ({ ...f, doctor: e.target.value }))} />
-        <input style={inputStyle} type="date" value={form.date || ''} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
-        <textarea style={{ ...inputStyle, minHeight: 60 }} placeholder="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
-        <button style={btnPrimary(P.rose)} onClick={saveAppointment}>Salvar</button>
+      <Modal open={!!modal} onClose={() => setModal(null)} title={modal === 'add' ? 'Novo item' : 'Editar'}>
+        {sub === 'Hábitos' && <>
+          <Inp label="Nome do hábito" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+          <Inp label="Emoji" value={form.emoji || '✨'} onChange={e => setForm(f => ({ ...f, emoji: e.target.value }))} />
+          <Sel label="Frequência" value={form.frequency || 'Diário'} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))}>
+            <option>Diário</option><option>Semanal</option>
+          </Sel>
+        </>}
+        {sub === 'Metas' && <>
+          <Inp label="Meta" value={form.text || ''} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
+          <Sel label="Categoria" value={form.category || 'Pessoal'} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+            <option>Carreira</option><option>Saúde</option><option>Relacionamentos</option><option>Finanças</option><option>Pessoal</option><option>Viagens</option>
+          </Sel>
+        </>}
+        {sub === 'Humor' && <>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 4 }}>
+            {moodEmojis.map(e => (
+              <button key={e} onClick={() => setForm(f => ({ ...f, emoji: e }))} style={{ fontSize: 32, background: form.emoji === e ? '#F3F4F6' : 'transparent', border: form.emoji === e ? '2px solid black' : '2px solid transparent', borderRadius: 12, padding: 4, cursor: 'pointer' }}>{e}</button>
+            ))}
+          </div>
+          <Inp label="Data" type="date" value={form.date || today()} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+          <Tex label="Nota" value={form.note || ''} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
+        </>}
+        {sub === 'Consultas' && <>
+          <Inp label="Título / Especialidade" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+          <Inp label="Médico / Profissional" value={form.doctor || ''} onChange={e => setForm(f => ({ ...f, doctor: e.target.value }))} />
+          <Inp label="Data" type="date" value={form.date || today()} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+          <Tex label="Notas" value={form.notes || ''} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+        </>}
+        <Btn onClick={save} full color={P.rose}>Salvar</Btn>
+        {modal === 'edit' && <Btn onClick={del} full ghost>Excluir</Btn>}
       </Modal>
     </div>
   )
 }
 
 // ─── CASA TAB ─────────────────────────────────────────────────────────────────
-function CasaTab({ userId }) {
+function CasaTab() {
   const [sub, setSub] = useState('Tarefas')
-  const cleaningTasks = useCol(userId, 'cleaningTasks')
-  const shopping      = useCol(userId, 'shopping')
-
   const [modal, setModal] = useState(null)
-  const [form, setForm]   = useState({})
+  const [form, setForm] = useState({})
+  const [refresh, setRefresh] = useState(0)
 
-  const todayStr = today()
-
-  async function saveCleanTask() {
-    if (!form.task) return
-    const d = { task: form.task, lastDone: form.lastDone || '', frequency: Number(form.frequency || 7), done: false }
-    if (form.id) await cleaningTasks.upd(form.id, d)
-    else await cleaningTasks.add(d)
-    setModal(null)
+  function openAdd() {
+    if (sub === 'Tarefas') setForm({ frequency: 7 })
+    else setForm({ done: false, category: 'Outros' })
+    setModal('add')
   }
 
-  async function saveShopItem() {
-    if (!form.item) return
-    const d = { item: form.item, qty: form.qty || '1', category: form.category || 'Outros', done: false }
-    if (form.id) await shopping.upd(form.id, d)
-    else await shopping.add(d)
-    setModal(null)
+  function openEdit(item) { setForm({ ...item }); setModal('edit') }
+
+  function save() {
+    const key = sub === 'Tarefas' ? 'avt_cleaning' : 'avt_shopping'
+    const list = db.get(key, [])
+    if (modal === 'add') db.set(key, [...list, { ...form, id: uid() }])
+    else db.set(key, list.map(i => i.id === form.id ? form : i))
+    setModal(null); setRefresh(r => r + 1)
   }
 
-  function daysSince(lastDone) {
-    if (!lastDone) return null
-    return diffDays(todayStr, lastDone)
+  function del() {
+    if (!window.confirm('Excluir?')) return
+    const key = sub === 'Tarefas' ? 'avt_cleaning' : 'avt_shopping'
+    db.set(key, db.get(key, []).filter(i => i.id !== form.id))
+    setModal(null); setRefresh(r => r + 1)
   }
 
-  function isOverdue(t) {
-    if (!t.lastDone || !t.frequency) return false
-    return daysSince(t.lastDone) >= Number(t.frequency)
+  function markDone(item) {
+    const list = db.get('avt_cleaning', [])
+    db.set('avt_cleaning', list.map(i => i.id === item.id ? { ...i, lastDone: today() } : i))
+    setRefresh(r => r + 1)
   }
 
-  const shopByCategory = shopping.data.reduce((acc, s) => {
-    const cat = s.category || 'Outros'
-    if (!acc[cat]) acc[cat] = []
-    acc[cat].push(s)
-    return acc
-  }, {})
+  function toggleShop(item) {
+    const list = db.get('avt_shopping', [])
+    db.set('avt_shopping', list.map(i => i.id === item.id ? { ...i, done: !i.done } : i))
+    setRefresh(r => r + 1)
+  }
+
+  function daysSince(dateStr) {
+    if (!dateStr) return null
+    return Math.floor((Date.now() - new Date(dateStr + 'T12:00:00').getTime()) / 86400000)
+  }
+
+  const cleaning = db.get('avt_cleaning', [])
+  const shopping = db.get('avt_shopping', [])
+
+  const shopByCategory = {}
+  shopping.forEach(s => { if (!shopByCategory[s.category]) shopByCategory[s.category] = []; shopByCategory[s.category].push(s) })
 
   return (
-    <div>
-      <TabHeader color={P.amber} emoji="🏡" title="Casa" subtitle="organização doméstica">
-        <button onClick={() => { setForm({}); setModal(sub === 'Tarefas' ? 'add-clean' : 'add-shop') }} style={{ background: 'white', border: '2px solid black', borderRadius: 12, padding: '6px 14px', fontWeight: 800, fontSize: 20, cursor: 'pointer', boxShadow: '2px 2px 0 black' }}>+</button>
-      </TabHeader>
-      <SubTabs tabs={['Tarefas', 'Compras']} active={sub} setActive={setSub} color={P.amber} />
+    <div style={{ paddingBottom: 88 }}>
+      <TabHeader color={P.amber} emoji="🏡" title="Casa" action={
+        <Btn small onClick={openAdd} color="rgba(255,255,255,0.25)" className="border-white border-opacity-50">+ Add</Btn>
+      } />
+      <SubTabs tabs={['Tarefas', 'Compras']} active={sub} onChange={setSub} color={P.amber} />
 
-      <div style={{ padding: '12px 12px 80px' }}>
-
+      <div style={{ padding: '16px 12px' }}>
         {sub === 'Tarefas' && (
-          <>
-            {cleaningTasks.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhuma tarefa. Adicione uma!</p>}
-            {cleaningTasks.data.map(t => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {cleaning.map(t => {
               const days = daysSince(t.lastDone)
-              const overdue = isOverdue(t)
+              const overdue = days !== null && days >= Number(t.frequency || 1)
+              const neverDone = t.lastDone === null || t.lastDone === undefined
+              const isOverdue = overdue || neverDone
               return (
-                <div key={t.id} style={{ background: overdue ? '#fff3f3' : 'white', border: `2px solid ${overdue ? P.red : 'black'}`, borderRadius: 14, padding: '12px 14px', marginBottom: 8, boxShadow: '2px 2px 0 black' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input
-                      type="checkbox"
-                      checked={!!t.done}
-                      onChange={async e => {
-                        await cleaningTasks.upd(t.id, { done: e.target.checked, lastDone: e.target.checked ? todayStr : t.lastDone })
-                      }}
-                      style={{ width: 18, height: 18, accentColor: P.amber, cursor: 'pointer', flexShrink: 0 }}
-                    />
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 700, fontSize: 14, textDecoration: t.done ? 'line-through' : 'none', color: t.done ? '#aaa' : P.dark }}>{t.task}</p>
-                      <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
-                        {days !== null && <span style={{ fontSize: 12, color: overdue ? P.red : '#888', fontWeight: overdue ? 700 : 400 }}>há {days} dia{days !== 1 ? 's' : ''}</span>}
-                        <span style={{ fontSize: 12, color: '#999' }}>a cada {t.frequency} dias</span>
-                      </div>
-                    </div>
-                    <button onClick={() => { setForm(t); setModal('edit-clean') }} style={{ ...btnSecondary, padding: '4px 8px' }}>✏️</button>
-                    <button onClick={() => { if (window.confirm('Remover?')) cleaningTasks.remove(t.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
+                <div key={t.id} style={{ background: isOverdue ? '#FEF2F2' : 'white', border: `2px solid ${isOverdue ? P.red : 'black'}`, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '2px 2px 0 black' }}>
+                  <input type="checkbox" onChange={() => markDone(t)} style={{ width: 20, height: 20, cursor: 'pointer', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }} onClick={() => openEdit(t)}>
+                    <p style={{ fontSize: 14, fontWeight: 600 }}>{t.task}</p>
+                    <p style={{ fontSize: 11, color: isOverdue ? P.red : '#6B7280', marginTop: 2 }}>
+                      {neverDone ? 'Nunca feito' : `há ${days} dias`} · a cada {t.frequency} dias
+                    </p>
                   </div>
                 </div>
               )
             })}
-          </>
+            {cleaning.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhuma tarefa de casa</p>}
+          </div>
         )}
-
         {sub === 'Compras' && (
-          <>
-            {shopping.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Lista vazia. Adicione um item!</p>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {Object.entries(shopByCategory).map(([cat, items]) => (
-              <div key={cat} style={{ marginBottom: 16 }}>
-                <p style={{ fontWeight: 700, fontSize: 12, color: '#888', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>{cat}</p>
+              <div key={cat}>
+                <p style={{ fontWeight: 800, fontSize: 12, color: P.amber, marginBottom: 6, letterSpacing: 1, textTransform: 'uppercase' }}>{cat}</p>
                 {items.map(s => (
-                  <div key={s.id} style={{ background: s.done ? '#f5f5f5' : 'white', border: '2px solid black', borderRadius: 14, padding: '10px 14px', marginBottom: 6, boxShadow: '2px 2px 0 black', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <input type="checkbox" checked={!!s.done} onChange={e => shopping.upd(s.id, { done: e.target.checked })} style={{ width: 18, height: 18, accentColor: P.amber, cursor: 'pointer', flexShrink: 0 }} />
-                    <p style={{ flex: 1, fontWeight: 600, fontSize: 14, textDecoration: s.done ? 'line-through' : 'none', color: s.done ? '#aaa' : P.dark }}>{s.item}</p>
-                    {s.qty && s.qty !== '1' && <span style={{ fontSize: 12, color: '#888' }}>x{s.qty}</span>}
-                    <button onClick={() => { if (window.confirm('Remover?')) shopping.remove(s.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
+                  <div key={s.id} style={{ background: 'white', border: '2px solid black', borderRadius: 12, padding: '10px 14px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input type="checkbox" checked={!!s.done} onChange={() => toggleShop(s)} style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0 }} />
+                    <p style={{ flex: 1, fontSize: 14, textDecoration: s.done ? 'line-through' : 'none', color: s.done ? '#9CA3AF' : P.dark, cursor: 'pointer' }} onClick={() => openEdit(s)}>
+                      {s.item}{s.qty ? ` (${s.qty})` : ''}
+                    </p>
                   </div>
                 ))}
               </div>
             ))}
-          </>
+            {shopping.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Lista de compras vazia</p>}
+          </div>
         )}
       </div>
 
-      <Modal open={modal === 'add-clean' || modal === 'edit-clean'} onClose={() => setModal(null)} title={modal === 'edit-clean' ? 'Editar Tarefa' : 'Nova Tarefa de Casa'}>
-        <input style={inputStyle} placeholder="Tarefa (ex: Limpar banheiro) *" value={form.task || ''} onChange={e => setForm(f => ({ ...f, task: e.target.value }))} />
-        <input style={inputStyle} type="date" placeholder="Última vez feita" value={form.lastDone || ''} onChange={e => setForm(f => ({ ...f, lastDone: e.target.value }))} />
-        <input style={inputStyle} type="number" placeholder="Frequência (dias, ex: 7)" value={form.frequency || ''} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))} />
-        <button style={btnPrimary(P.amber)} onClick={saveCleanTask}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-shop' || modal === 'edit-shop'} onClose={() => setModal(null)} title={modal === 'edit-shop' ? 'Editar Item' : 'Novo Item'}>
-        <input style={inputStyle} placeholder="Item *" value={form.item || ''} onChange={e => setForm(f => ({ ...f, item: e.target.value }))} />
-        <input style={inputStyle} placeholder="Quantidade (ex: 2)" value={form.qty || ''} onChange={e => setForm(f => ({ ...f, qty: e.target.value }))} />
-        <input style={inputStyle} placeholder="Categoria (ex: Alimentos)" value={form.category || ''} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} />
-        <button style={btnPrimary(P.amber)} onClick={saveShopItem}>Salvar</button>
+      <Modal open={!!modal} onClose={() => setModal(null)} title={modal === 'add' ? 'Novo item' : 'Editar'}>
+        {sub === 'Tarefas' && <>
+          <Inp label="Tarefa" value={form.task || ''} onChange={e => setForm(f => ({ ...f, task: e.target.value }))} />
+          <Inp label="Frequência (dias)" type="number" min={1} value={form.frequency || 7} onChange={e => setForm(f => ({ ...f, frequency: e.target.value }))} />
+        </>}
+        {sub === 'Compras' && <>
+          <Inp label="Item" value={form.item || ''} onChange={e => setForm(f => ({ ...f, item: e.target.value }))} />
+          <Inp label="Quantidade" value={form.qty || ''} onChange={e => setForm(f => ({ ...f, qty: e.target.value }))} />
+          <Sel label="Categoria" value={form.category || 'Outros'} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+            <option>Mercado</option><option>Farmácia</option><option>Limpeza</option><option>Higiene</option><option>Outros</option>
+          </Sel>
+        </>}
+        <Btn onClick={save} full color={P.amber}>Salvar</Btn>
+        {modal === 'edit' && <Btn onClick={del} full ghost>Excluir</Btn>}
       </Modal>
     </div>
   )
 }
 
 // ─── FINANÇAS TAB ─────────────────────────────────────────────────────────────
-const CATEGORY_EMOJIS = {
-  'Alimentação':  '🍔',
-  'Transporte':   '🚗',
-  'Compras':      '🛍️',
-  'Saúde':        '🏥',
-  'Casa':         '🏠',
-  'Beleza':       '💄',
-  'Educação':     '📚',
-  'Salário':      '💰',
-  'Lazer':        '🎉',
-  'Outros':       '📦',
-}
-
-function FinancasTab({ userId }) {
+function FinancasTab() {
   const [sub, setSub] = useState('Extrato')
-  const expenses = useCol(userId, 'expenses')
-  const accounts = useCol(userId, 'accounts')
-  const cards    = useCol(userId, 'cards')
-  const finGoals = useCol(userId, 'finGoals')
-
   const [modal, setModal] = useState(null)
-  const [form, setForm]   = useState({})
+  const [form, setForm] = useState({})
+  const [refresh, setRefresh] = useState(0)
 
-  const todayStr = today()
-  const yestDate = new Date(); yestDate.setDate(yestDate.getDate() - 1)
-  const yesterdayStr = yestDate.toISOString().split('T')[0]
+  const catEmoji = { Alimentação: '🍔', Transporte: '🚗', Compras: '🛍️', Saúde: '🏥', Casa: '🏠', Beleza: '💄', Educação: '📚', Salário: '💰', Outros: '📋' }
 
-  async function saveExpense() {
-    if (!form.description || !form.amount) return
-    const d = { date: form.date || todayStr, description: form.description, amount: Number(form.amount), category: form.category || 'Outros', account: form.account || '', type: form.type || 'saída' }
-    if (form.id) await expenses.upd(form.id, d)
-    else await expenses.add(d)
-    setModal(null)
+  function openAdd() {
+    const defaults = {
+      'Extrato': { type: 'saída', date: today(), category: 'Outros' },
+      'Contas': { type: 'Corrente', balance: 0 },
+      'Cartões': { limit: 0, spent: 0, dueDay: 1 },
+      'Metas': { target: 0, current: 0 },
+    }
+    setForm(defaults[sub] || {})
+    setModal('add')
   }
 
-  async function saveAccount() {
-    if (!form.name) return
-    const d = { name: form.name, type: form.type || 'corrente', balance: Number(form.balance || 0) }
-    if (form.id) await accounts.upd(form.id, d)
-    else await accounts.add(d)
-    setModal(null)
+  function openEdit(item) { setForm({ ...item }); setModal('edit') }
+
+  function getKey() {
+    return { 'Extrato': 'avt_expenses', 'Contas': 'avt_accounts', 'Cartões': 'avt_cards', 'Metas': 'avt_fin_goals' }[sub]
   }
 
-  async function saveCard() {
-    if (!form.name) return
-    const d = { name: form.name, limit: Number(form.limit || 0), spent: Number(form.spent || 0), dueDay: Number(form.dueDay || 1) }
-    if (form.id) await cards.upd(form.id, d)
-    else await cards.add(d)
-    setModal(null)
+  function save() {
+    const key = getKey()
+    const list = db.get(key, [])
+    if (modal === 'add') db.set(key, [...list, { ...form, id: uid() }])
+    else db.set(key, list.map(i => i.id === form.id ? form : i))
+    setModal(null); setRefresh(r => r + 1)
   }
 
-  async function saveFinGoal() {
-    if (!form.name) return
-    const d = { name: form.name, target: Number(form.target || 0), current: Number(form.current || 0) }
-    if (form.id) await finGoals.upd(form.id, d)
-    else await finGoals.add(d)
-    setModal(null)
+  function del() {
+    if (!window.confirm('Excluir?')) return
+    const key = getKey()
+    db.set(key, db.get(key, []).filter(i => i.id !== form.id))
+    setModal(null); setRefresh(r => r + 1)
   }
 
-  const grouped = expenses.data.reduce((acc, e) => {
-    const d = e.date || todayStr
-    if (!acc[d]) acc[d] = []
-    acc[d].push(e)
-    return acc
-  }, {})
-  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a))
+  const expenses = db.get('avt_expenses', []).sort((a, b) => b.date > a.date ? 1 : -1)
+  const accounts = db.get('avt_accounts', [])
+  const cards = db.get('avt_cards', [])
+  const finGoals = db.get('avt_fin_goals', [])
 
-  function dateLabel(d) {
-    if (d === todayStr) return 'Hoje'
-    if (d === yesterdayStr) return 'Ontem'
-    return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  const thisMonth = new Date().toISOString().slice(0, 7)
+  const monthSpend = expenses.filter(e => e.type === 'saída' && e.date && e.date.startsWith(thisMonth)).reduce((s, e) => s + Number(e.amount || 0), 0)
+  const totalBalance = accounts.reduce((s, a) => s + Number(a.balance || 0), 0)
+
+  function groupExpenses() {
+    const groups = {}
+    const td = today()
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+    expenses.forEach(e => {
+      let label = e.date === td ? 'Hoje' : e.date === yesterday ? 'Ontem' : fmtDate(e.date)
+      if (!groups[label]) groups[label] = []
+      groups[label].push(e)
+    })
+    return groups
   }
 
   function daysUntilDue(dueDay) {
@@ -1068,418 +904,318 @@ function FinancasTab({ userId }) {
     return Math.ceil((due - now) / 86400000)
   }
 
-  const totalBalance = accounts.data.reduce((s, a) => s + (Number(a.balance) || 0), 0)
-
-  const subAddMap = { 'Extrato': 'expense', 'Contas': 'account', 'Cartões': 'card', 'Metas': 'fingoal' }
+  const expGroups = groupExpenses()
 
   return (
-    <div>
-      <TabHeader color={P.plum} emoji="💰" title="Finanças" subtitle="seu dinheiro">
-        <button onClick={() => { setForm({}); setModal('add-' + subAddMap[sub]) }} style={{ background: 'white', border: '2px solid black', borderRadius: 12, padding: '6px 14px', fontWeight: 800, fontSize: 20, cursor: 'pointer', boxShadow: '2px 2px 0 black' }}>+</button>
-      </TabHeader>
-      <SubTabs tabs={['Extrato', 'Contas', 'Cartões', 'Metas']} active={sub} setActive={setSub} color={P.plum} />
+    <div style={{ paddingBottom: 88 }}>
+      <TabHeader color={P.plum} emoji="💰" title="Finanças" action={
+        <Btn small onClick={openAdd} color="rgba(255,255,255,0.25)" className="border-white border-opacity-50">+ Add</Btn>
+      } />
+      <SubTabs tabs={['Extrato', 'Contas', 'Cartões', 'Metas']} active={sub} onChange={setSub} color={P.plum} />
 
-      <div style={{ padding: '12px 12px 80px' }}>
-
+      <div style={{ padding: '16px 12px' }}>
         {sub === 'Extrato' && (
           <>
-            {expenses.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhuma transação. Adicione uma!</p>}
-            {sortedDates.map(date => (
-              <div key={date} style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 12, fontWeight: 700, color: '#888', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>{dateLabel(date)}</p>
-                {grouped[date].map(e => (
-                  <div key={e.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '10px 14px', marginBottom: 6, boxShadow: '2px 2px 0 black', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 22, flexShrink: 0 }}>{CATEGORY_EMOJIS[e.category] || '📦'}</span>
+            <div style={{ background: P.plum, backgroundImage: stripe, borderRadius: 16, padding: '14px 16px', marginBottom: 16, border: '2px solid black', boxShadow: '3px 3px 0 black' }}>
+              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>Gastos este mês</p>
+              <p className="font-numbers" style={{ color: 'white', fontSize: 28, fontWeight: 800, marginTop: 4 }}>{money(monthSpend)}</p>
+            </div>
+            {Object.entries(expGroups).map(([date, items]) => (
+              <div key={date} style={{ marginBottom: 14 }}>
+                <p style={{ fontSize: 11, fontWeight: 800, color: '#6B7280', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>{date}</p>
+                {items.map(e => (
+                  <div key={e.id} onClick={() => openEdit(e)} style={{ background: 'white', border: '2px solid black', borderRadius: 12, padding: '10px 14px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>{catEmoji[e.category] || '📋'}</span>
                     <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 700, fontSize: 14 }}>{e.description}</p>
-                      <p style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{e.category}{e.account ? ` · ${e.account}` : ''}</p>
+                      <p style={{ fontSize: 14, fontWeight: 600 }}>{e.description}</p>
+                      <p style={{ fontSize: 11, color: '#6B7280' }}>{e.category}{e.account ? ` · ${e.account}` : ''}</p>
                     </div>
-                    <span className="font-numbers" style={{ fontWeight: 800, fontSize: 15, color: e.type === 'entrada' ? P.forest : P.red, whiteSpace: 'nowrap' }}>
-                      {e.type === 'entrada' ? '+' : '-'}{fmtBRL(e.amount)}
-                    </span>
-                    <button onClick={() => { if (window.confirm('Remover?')) expenses.remove(e.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
+                    <p style={{ fontWeight: 800, fontSize: 14, color: e.type === 'entrada' ? P.forest : P.red, whiteSpace: 'nowrap' }}>
+                      {e.type === 'entrada' ? '+' : '-'}{money(e.amount)}
+                    </p>
                   </div>
                 ))}
               </div>
             ))}
+            {expenses.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhuma transação</p>}
           </>
         )}
-
         {sub === 'Contas' && (
           <>
-            <div style={{ background: P.plum, backgroundImage: stripe('dark', 0.06), borderRadius: 16, border: '2px solid black', padding: '16px 20px', marginBottom: 14, boxShadow: '4px 4px 0 black' }}>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 700 }}>SALDO TOTAL</p>
-              <p className="font-numbers" style={{ color: 'white', fontSize: 28, fontWeight: 800, marginTop: 4 }}>{fmtBRL(totalBalance)}</p>
+            <div style={{ background: P.plum, backgroundImage: stripe, borderRadius: 16, padding: '14px 16px', marginBottom: 16, border: '2px solid black', boxShadow: '3px 3px 0 black' }}>
+              <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>Total em contas</p>
+              <p className="font-numbers" style={{ color: 'white', fontSize: 28, fontWeight: 800, marginTop: 4 }}>{money(totalBalance)}</p>
             </div>
-            {accounts.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhuma conta. Adicione uma!</p>}
-            {accounts.data.map(a => (
-              <div key={a.id} style={{ background: 'white', border: '2px solid black', borderRadius: 14, padding: '12px 16px', marginBottom: 8, boxShadow: '3px 3px 0 black', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 800, fontSize: 15 }}>{a.name}</p>
-                  <p style={{ fontSize: 12, color: '#888', marginTop: 2, textTransform: 'capitalize' }}>{a.type}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {accounts.map(a => (
+                <div key={a.id} onClick={() => openEdit(a)} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: '14px 16px', cursor: 'pointer', boxShadow: '3px 3px 0 black' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ fontWeight: 700, fontSize: 15 }}>{a.name}</p>
+                      <p style={{ fontSize: 12, color: '#6B7280' }}>{a.type}</p>
+                    </div>
+                    <p className="font-numbers" style={{ fontWeight: 800, fontSize: 18, color: Number(a.balance) >= 0 ? P.forest : P.red }}>{money(a.balance)}</p>
+                  </div>
                 </div>
-                <p className="font-numbers" style={{ fontWeight: 800, fontSize: 18, color: Number(a.balance) >= 0 ? P.forest : P.red }}>{fmtBRL(a.balance)}</p>
-                <button onClick={() => { setForm(a); setModal('edit-account') }} style={{ ...btnSecondary, padding: '4px 8px' }}>✏️</button>
-                <button onClick={() => { if (window.confirm('Remover?')) accounts.remove(a.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
-              </div>
-            ))}
+              ))}
+              {accounts.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhuma conta</p>}
+            </div>
           </>
         )}
-
         {sub === 'Cartões' && (
-          <>
-            {cards.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhum cartão. Adicione um!</p>}
-            {cards.data.map(c => {
-              const pct = c.limit > 0 ? Math.min(100, (Number(c.spent) / Number(c.limit)) * 100) : 0
-              const daysLeft = daysUntilDue(c.dueDay)
-              const isWarning = pct > 80
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {cards.map(c => {
+              const pct = Number(c.limit) > 0 ? Math.min(100, (Number(c.spent) / Number(c.limit)) * 100) : 0
+              const days = daysUntilDue(Number(c.dueDay))
               return (
-                <div key={c.id} style={{ background: P.dark, backgroundImage: stripe('light', 0.05), borderRadius: 18, border: '2px solid black', padding: '18px 20px', marginBottom: 12, boxShadow: '4px 4px 0 black' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <p style={{ color: 'white', fontWeight: 800, fontSize: 18 }}>{c.name}</p>
-                    <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>Vence em {daysLeft} dia{daysLeft !== 1 ? 's' : ''}</span>
+                <div key={c.id} onClick={() => openEdit(c)} style={{ background: P.dark, backgroundImage: stripe, border: '2px solid black', borderRadius: 18, padding: '18px 16px', cursor: 'pointer', boxShadow: '4px 4px 0 black' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <p style={{ color: 'white', fontWeight: 800, fontSize: 16 }}>{c.name}</p>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11 }}>vence em {days}d</p>
                   </div>
-                  <p className="font-numbers" style={{ color: 'white', fontSize: 24, fontWeight: 800, marginBottom: 8 }}>
-                    {fmtBRL(c.spent)} <span style={{ fontSize: 14, opacity: 0.6 }}>/ {fmtBRL(c.limit)}</span>
-                  </p>
-                  <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 999, height: 8, overflow: 'hidden', marginBottom: 8 }}>
-                    <div style={{ background: isWarning ? P.red : P.teal, height: '100%', width: `${pct}%`, borderRadius: 999, transition: 'width 0.5s' }} />
+                  <p className="font-numbers" style={{ color: 'white', fontSize: 22, fontWeight: 800 }}>{money(c.spent)}</p>
+                  <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>de {money(c.limit)} disponíveis</p>
+                  <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 99, height: 6, overflow: 'hidden', marginTop: 10 }}>
+                    <div style={{ background: pct > 80 ? P.red : P.forest, height: '100%', width: `${pct}%`, borderRadius: 99 }} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: isWarning ? '#ff9999' : 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 700 }}>{pct.toFixed(0)}% usado</span>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => { setForm(c); setModal('edit-card') }} style={{ ...btnSecondary, padding: '4px 10px', fontSize: 12 }}>✏️</button>
-                      <button onClick={() => { if (window.confirm('Remover?')) cards.remove(c.id) }} style={{ ...btnSecondary, padding: '4px 10px', fontSize: 12, color: P.red }}>🗑️</button>
-                    </div>
-                  </div>
+                  <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 4 }}>{pct.toFixed(0)}% utilizado</p>
                 </div>
               )
             })}
-          </>
+            {cards.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhum cartão</p>}
+          </div>
         )}
-
         {sub === 'Metas' && (
-          <>
-            {finGoals.data.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhuma meta. Adicione uma!</p>}
-            {finGoals.data.map(g => {
-              const pct = g.target > 0 ? Math.min(100, (Number(g.current) / Number(g.target)) * 100) : 0
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {finGoals.map(g => {
+              const pct = Number(g.target) > 0 ? Math.min(100, (Number(g.current) / Number(g.target)) * 100) : 0
               return (
-                <div key={g.id} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: '14px 16px', marginBottom: 10, boxShadow: '3px 3px 0 black' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <p style={{ fontWeight: 800, fontSize: 15 }}>{g.name}</p>
-                    <span className="font-numbers" style={{ fontSize: 13, fontWeight: 700, color: P.plum }}>{pct.toFixed(0)}%</span>
+                <div key={g.id} onClick={() => openEdit(g)} style={{ background: 'white', border: '2px solid black', borderRadius: 16, padding: '14px 16px', cursor: 'pointer', boxShadow: '3px 3px 0 black' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <p style={{ fontWeight: 700, fontSize: 15 }}>{g.name}</p>
+                    <p style={{ fontWeight: 800, fontSize: 13, color: P.plum }}>{pct.toFixed(0)}%</p>
                   </div>
-                  <div style={{ background: '#eee', borderRadius: 999, height: 10, overflow: 'hidden', marginBottom: 8 }}>
-                    <div style={{ background: pct >= 100 ? P.forest : P.plum, height: '100%', width: `${pct}%`, borderRadius: 999, transition: 'width 0.5s' }} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 13, color: '#666' }}>{fmtBRL(g.current)} <span style={{ color: '#aaa' }}>de {fmtBRL(g.target)}</span></span>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button onClick={() => { setForm(g); setModal('edit-fingoal') }} style={{ ...btnSecondary, padding: '4px 8px' }}>✏️</button>
-                      <button onClick={() => { if (window.confirm('Remover?')) finGoals.remove(g.id) }} style={{ ...btnSecondary, padding: '4px 8px', color: P.red }}>🗑️</button>
-                    </div>
+                  <ProgressBar value={pct} color={P.plum} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                    <p style={{ fontSize: 12, color: '#6B7280' }}>{money(g.current)}</p>
+                    <p style={{ fontSize: 12, color: '#6B7280' }}>{money(g.target)}</p>
                   </div>
                 </div>
               )
             })}
-          </>
+            {finGoals.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhuma meta financeira</p>}
+          </div>
         )}
       </div>
 
-      <Modal open={modal === 'add-expense' || modal === 'edit-expense'} onClose={() => setModal(null)} title={modal === 'edit-expense' ? 'Editar Transação' : 'Nova Transação'}>
-        <input style={inputStyle} type="date" value={form.date || todayStr} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
-        <input style={inputStyle} placeholder="Descrição *" value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-        <input style={inputStyle} type="number" step="0.01" placeholder="Valor (R$) *" value={form.amount || ''} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
-        <select style={inputStyle} value={form.type || 'saída'} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-          <option value="saída">Saída</option>
-          <option value="entrada">Entrada</option>
-        </select>
-        <select style={inputStyle} value={form.category || 'Outros'} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
-          {Object.keys(CATEGORY_EMOJIS).map(c => <option key={c}>{c}</option>)}
-        </select>
-        <input style={inputStyle} placeholder="Conta (ex: Nubank)" value={form.account || ''} onChange={e => setForm(f => ({ ...f, account: e.target.value }))} />
-        <button style={btnPrimary(P.plum)} onClick={saveExpense}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-account' || modal === 'edit-account'} onClose={() => setModal(null)} title={modal === 'edit-account' ? 'Editar Conta' : 'Nova Conta'}>
-        <input style={inputStyle} placeholder="Nome (ex: Nubank) *" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-        <select style={inputStyle} value={form.type || 'corrente'} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
-          <option value="corrente">Conta Corrente</option>
-          <option value="poupança">Poupança</option>
-          <option value="investimento">Investimento</option>
-        </select>
-        <input style={inputStyle} type="number" step="0.01" placeholder="Saldo atual (R$)" value={form.balance || ''} onChange={e => setForm(f => ({ ...f, balance: e.target.value }))} />
-        <button style={btnPrimary(P.plum)} onClick={saveAccount}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-card' || modal === 'edit-card'} onClose={() => setModal(null)} title={modal === 'edit-card' ? 'Editar Cartão' : 'Novo Cartão'}>
-        <input style={inputStyle} placeholder="Nome do cartão *" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-        <input style={inputStyle} type="number" step="0.01" placeholder="Limite (R$)" value={form.limit || ''} onChange={e => setForm(f => ({ ...f, limit: e.target.value }))} />
-        <input style={inputStyle} type="number" step="0.01" placeholder="Fatura atual (R$)" value={form.spent || ''} onChange={e => setForm(f => ({ ...f, spent: e.target.value }))} />
-        <input style={inputStyle} type="number" min="1" max="31" placeholder="Dia de vencimento" value={form.dueDay || ''} onChange={e => setForm(f => ({ ...f, dueDay: e.target.value }))} />
-        <button style={btnPrimary(P.plum)} onClick={saveCard}>Salvar</button>
-      </Modal>
-
-      <Modal open={modal === 'add-fingoal' || modal === 'edit-fingoal'} onClose={() => setModal(null)} title={modal === 'edit-fingoal' ? 'Editar Meta' : 'Nova Meta Financeira'}>
-        <input style={inputStyle} placeholder="Nome da meta *" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-        <input style={inputStyle} type="number" step="0.01" placeholder="Valor alvo (R$)" value={form.target || ''} onChange={e => setForm(f => ({ ...f, target: e.target.value }))} />
-        <input style={inputStyle} type="number" step="0.01" placeholder="Valor atual (R$)" value={form.current || ''} onChange={e => setForm(f => ({ ...f, current: e.target.value }))} />
-        <button style={btnPrimary(P.plum)} onClick={saveFinGoal}>Salvar</button>
+      <Modal open={!!modal} onClose={() => setModal(null)} title={modal === 'add' ? 'Novo item' : 'Editar'}>
+        {sub === 'Extrato' && <>
+          <Inp label="Descrição" value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+          <Inp label="Valor (R$)" type="number" step="0.01" value={form.amount || ''} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+          <Sel label="Tipo" value={form.type || 'saída'} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+            <option value="saída">Saída</option><option value="entrada">Entrada</option>
+          </Sel>
+          <Sel label="Categoria" value={form.category || 'Outros'} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+            <option>Alimentação</option><option>Transporte</option><option>Compras</option><option>Saúde</option><option>Casa</option><option>Beleza</option><option>Educação</option><option>Salário</option><option>Outros</option>
+          </Sel>
+          <Inp label="Conta" value={form.account || ''} onChange={e => setForm(f => ({ ...f, account: e.target.value }))} />
+          <Inp label="Data" type="date" value={form.date || today()} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+        </>}
+        {sub === 'Contas' && <>
+          <Inp label="Nome da conta" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+          <Sel label="Tipo" value={form.type || 'Corrente'} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+            <option>Corrente</option><option>Poupança</option><option>Investimento</option>
+          </Sel>
+          <Inp label="Saldo (R$)" type="number" step="0.01" value={form.balance || ''} onChange={e => setForm(f => ({ ...f, balance: e.target.value }))} />
+        </>}
+        {sub === 'Cartões' && <>
+          <Inp label="Nome do cartão" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+          <Inp label="Limite (R$)" type="number" step="0.01" value={form.limit || ''} onChange={e => setForm(f => ({ ...f, limit: e.target.value }))} />
+          <Inp label="Fatura atual (R$)" type="number" step="0.01" value={form.spent || ''} onChange={e => setForm(f => ({ ...f, spent: e.target.value }))} />
+          <Inp label="Dia de vencimento" type="number" min={1} max={31} value={form.dueDay || ''} onChange={e => setForm(f => ({ ...f, dueDay: e.target.value }))} />
+        </>}
+        {sub === 'Metas' && <>
+          <Inp label="Nome da meta" value={form.name || ''} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+          <Inp label="Meta (R$)" type="number" step="0.01" value={form.target || ''} onChange={e => setForm(f => ({ ...f, target: e.target.value }))} />
+          <Inp label="Economizado (R$)" type="number" step="0.01" value={form.current || ''} onChange={e => setForm(f => ({ ...f, current: e.target.value }))} />
+        </>}
+        <Btn onClick={save} full color={P.plum}>Salvar</Btn>
+        {modal === 'edit' && <Btn onClick={del} full ghost>Excluir</Btn>}
       </Modal>
     </div>
   )
 }
 
-// ─── NOTAS TAB ────────────────────────────────────────────────────────────────
-function NotasTab({ userId }) {
-  const notes = useCol(userId, 'notes')
+// ─── NOTAS PANEL ─────────────────────────────────────────────────────────────
+function NotasPanel({ onClose }) {
   const [modal, setModal] = useState(null)
-  const [form, setForm]   = useState({})
+  const [form, setForm] = useState({})
+  const [refresh, setRefresh] = useState(0)
 
-  const nowIso = new Date().toISOString()
+  const notes = db.get('avt_notes', [])
 
-  async function saveNote() {
-    if (!form.title) return
-    const d = { title: form.title, text: form.text || '', reminder: form.reminder || '', done: form.done || false }
-    if (form.id) await notes.upd(form.id, d)
-    else await notes.add(d)
-    setModal(null)
+  function openAdd() { setForm({}); setModal('add') }
+  function openEdit(n) { setForm({ ...n }); setModal('edit') }
+
+  function save() {
+    const list = db.get('avt_notes', [])
+    if (modal === 'add') db.set('avt_notes', [...list, { ...form, id: uid() }])
+    else db.set('avt_notes', list.map(i => i.id === form.id ? form : i))
+    setModal(null); setRefresh(r => r + 1)
   }
 
-  function isOverdue(n) {
-    return n.reminder && !n.done && n.reminder < nowIso
+  function del() {
+    if (!window.confirm('Excluir?')) return
+    db.set('avt_notes', db.get('avt_notes', []).filter(i => i.id !== form.id))
+    setModal(null); setRefresh(r => r + 1)
   }
 
-  const sorted = [...notes.data].sort((a, b) => {
-    if (isOverdue(a) && !isOverdue(b)) return -1
-    if (!isOverdue(a) && isOverdue(b)) return 1
-    return 0
-  })
+  function toggleDone(note) {
+    const list = db.get('avt_notes', [])
+    db.set('avt_notes', list.map(i => i.id === note.id ? { ...i, done: !i.done } : i))
+    setRefresh(r => r + 1)
+  }
+
+  const noteList = db.get('avt_notes', [])
 
   return (
-    <div>
-      <TabHeader color={P.teal} emoji="📝" title="Notas" subtitle="lembretes & ideias">
-        <button onClick={() => { setForm({}); setModal('add') }} style={{ background: 'white', border: '2px solid black', borderRadius: 12, padding: '6px 14px', fontWeight: 800, fontSize: 20, cursor: 'pointer', boxShadow: '2px 2px 0 black' }}>+</button>
-      </TabHeader>
-
-      <div style={{ padding: '12px 12px 80px' }}>
-        {sorted.length === 0 && <p style={{ color: '#888', textAlign: 'center', marginTop: 24 }}>Nenhuma nota. Adicione uma!</p>}
-        {sorted.map(n => {
-          const overdue = isOverdue(n)
-          return (
-            <div key={n.id} style={{ background: overdue ? '#fff3f3' : 'white', border: `2px solid ${overdue ? P.red : 'black'}`, borderRadius: 16, padding: 14, marginBottom: 10, boxShadow: '3px 3px 0 black' }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <input type="checkbox" checked={!!n.done} onChange={e => notes.upd(n.id, { done: e.target.checked })} style={{ width: 18, height: 18, accentColor: P.teal, cursor: 'pointer', marginTop: 2, flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontWeight: 800, fontSize: 15, textDecoration: n.done ? 'line-through' : 'none', color: n.done ? '#aaa' : P.dark }}>{n.title}</p>
-                  {n.text && <p style={{ fontSize: 13, color: '#555', marginTop: 4, lineHeight: 1.5 }}>{n.text}</p>}
-                  {n.reminder && (
-                    <p style={{ fontSize: 12, color: overdue ? P.red : P.teal, fontWeight: 700, marginTop: 4 }}>
-                      {overdue ? '⚠️' : '🔔'} {new Date(n.reminder).toLocaleString('pt-BR')}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                <button onClick={() => { setForm(n); setModal('edit') }} style={btnSecondary}>✏️ Editar</button>
-                <button onClick={() => { if (window.confirm('Remover nota?')) notes.remove(n.id) }} style={{ ...btnSecondary, color: P.red }}>🗑️</button>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div style={{ background: 'white', borderRadius: '24px 24px 0 0', border: '2.5px solid black', width: '100%', maxHeight: '92vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ background: P.teal, backgroundImage: stripe, padding: '20px 16px 4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 className="font-display" style={{ color: 'white', fontSize: 30 }}>📝 Notas</h2>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Btn small onClick={openAdd} color="rgba(255,255,255,0.25)" className="border-white border-opacity-50">+ Add</Btn>
+              <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.5)', borderRadius: 10, padding: '4px 10px', fontSize: 18, cursor: 'pointer', color: 'white' }}>×</button>
+            </div>
+          </div>
+        </div>
+        <ScallopBorder fill="white" />
+        <div style={{ padding: '8px 12px 32px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {noteList.map(n => (
+            <div key={n.id} style={{ background: n.done ? '#F9FAFB' : P.cream, border: `2px solid ${n.done ? '#E5E7EB' : 'black'}`, borderRadius: 14, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start', boxShadow: n.done ? 'none' : '2px 2px 0 black' }}>
+              <input type="checkbox" checked={!!n.done} onChange={() => toggleDone(n)} style={{ width: 18, height: 18, cursor: 'pointer', flexShrink: 0, marginTop: 2 }} />
+              <div style={{ flex: 1 }} onClick={() => openEdit(n)}>
+                {n.title && <p style={{ fontWeight: 700, fontSize: 14, textDecoration: n.done ? 'line-through' : 'none', color: n.done ? '#9CA3AF' : P.dark }}>{n.title}</p>}
+                {n.text && <p style={{ fontSize: 13, color: n.done ? '#9CA3AF' : '#374151', marginTop: n.title ? 2 : 0, textDecoration: n.done ? 'line-through' : 'none' }}>{n.text}</p>}
+                {n.reminder && <p style={{ fontSize: 11, color: P.teal, fontWeight: 700, marginTop: 4 }}>⏰ {new Date(n.reminder).toLocaleString('pt-BR')}</p>}
               </div>
             </div>
-          )
-        })}
+          ))}
+          {noteList.length === 0 && <p style={{ color: '#9CA3AF', textAlign: 'center', padding: 32 }}>Nenhuma nota</p>}
+        </div>
       </div>
 
-      <Modal open={modal === 'add' || modal === 'edit'} onClose={() => setModal(null)} title={modal === 'edit' ? 'Editar Nota' : 'Nova Nota'}>
-        <input style={inputStyle} placeholder="Título *" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-        <textarea style={{ ...inputStyle, minHeight: 80 }} placeholder="Texto" value={form.text || ''} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
-        <label style={{ fontSize: 13, fontWeight: 700, color: '#555', display: 'block', marginBottom: 4 }}>Lembrete (opcional)</label>
-        <input style={inputStyle} type="datetime-local" value={form.reminder || ''} onChange={e => setForm(f => ({ ...f, reminder: e.target.value }))} />
-        <button style={btnPrimary(P.teal)} onClick={saveNote}>Salvar</button>
+      <Modal open={!!modal} onClose={() => setModal(null)} title={modal === 'add' ? 'Nova Nota' : 'Editar Nota'}>
+        <Inp label="Título" value={form.title || ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+        <Tex label="Texto" value={form.text || ''} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} />
+        <Inp label="Lembrete" type="datetime-local" value={form.reminder || ''} onChange={e => setForm(f => ({ ...f, reminder: e.target.value }))} />
+        <Btn onClick={save} full color={P.teal}>Salvar</Btn>
+        {modal === 'edit' && <Btn onClick={del} full ghost>Excluir</Btn>}
       </Modal>
+    </div>
+  )
+}
+
+// ─── SETTINGS MODAL ───────────────────────────────────────────────────────────
+function SettingsModal({ onClose }) {
+  const [exportCode, setExportCode] = useState('')
+  const [importCode, setImportCode] = useState('')
+
+  function doExport() {
+    setExportCode(exportData())
+  }
+
+  function doImport() {
+    if (!importCode.trim()) return
+    importData(importCode.trim())
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
+      <div style={{ background: 'white', borderRadius: '24px 24px 0 0', border: '2.5px solid black', width: '100%', maxHeight: '92vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '20px 20px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontWeight: 800, fontSize: 18 }}>⚙️ Configurações</h3>
+            <button onClick={onClose} style={{ fontSize: 24, lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer' }}>×</button>
+          </div>
+        </div>
+        <div style={{ padding: '0 20px 32px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div>
+            <p style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>Exportar dados</p>
+            <p style={{ fontSize: 13, color: '#6B7280', marginBottom: 10 }}>Copie o código abaixo para guardar todos os seus dados.</p>
+            <Btn onClick={doExport} full color={P.navy}>Gerar código</Btn>
+            {exportCode && (
+              <div style={{ marginTop: 10 }}>
+                <textarea
+                  readOnly
+                  value={exportCode}
+                  style={{ width: '100%', border: '2px solid black', borderRadius: 12, padding: 10, fontSize: 12, fontFamily: 'monospace', resize: 'none', height: 100, boxSizing: 'border-box' }}
+                  onClick={e => e.target.select()}
+                />
+                <p style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>Toque no código para selecionar e copie.</p>
+              </div>
+            )}
+          </div>
+          <div style={{ borderTop: '2px solid #E5E7EB', paddingTop: 16 }}>
+            <p style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>Importar dados</p>
+            <p style={{ fontSize: 13, color: '#6B7280', marginBottom: 10 }}>Cole o código de backup para restaurar seus dados. Isso substituirá todos os dados atuais.</p>
+            <textarea
+              value={importCode}
+              onChange={e => setImportCode(e.target.value)}
+              placeholder="Cole o código aqui..."
+              style={{ width: '100%', border: '2px solid black', borderRadius: 12, padding: 10, fontSize: 12, fontFamily: 'monospace', resize: 'none', height: 100, boxSizing: 'border-box', marginBottom: 10 }}
+            />
+            <Btn onClick={doImport} full color={P.red}>Restaurar dados</Btn>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
 
 // ─── BOTTOM NAV ───────────────────────────────────────────────────────────────
-const NAV_TABS = [
-  { id: 'home',     emoji: '✦',  label: 'Home',     color: P.red    },
-  { id: 'estudos',  emoji: '📚', label: 'Estudos',  color: P.navy   },
-  { id: 'trabalho', emoji: '💼', label: 'Trabalho', color: P.forest },
-  { id: 'vida',     emoji: '🌸', label: 'Vida',     color: P.rose   },
-  { id: 'casa',     emoji: '🏡', label: 'Casa',     color: P.amber  },
-  { id: 'financas', emoji: '💰', label: 'Finanças', color: P.plum   },
+const navItems = [
+  { key: 'home', emoji: '✦', label: 'Home', color: P.red },
+  { key: 'estudos', emoji: '📚', label: 'Estudos', color: P.navy },
+  { key: 'trabalho', emoji: '💼', label: 'Trabalho', color: P.forest },
+  { key: 'vida', emoji: '🌸', label: 'Vida', color: P.rose },
+  { key: 'casa', emoji: '🏡', label: 'Casa', color: P.amber },
+  { key: 'financas', emoji: '💰', label: 'Finanças', color: P.plum },
 ]
 
-function BottomNav({ active, setActive }) {
+function BottomNav({ tab, setTab }) {
   return (
-    <div style={{
-      position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-      width: '100%', maxWidth: 480, background: 'white', borderTop: '2px solid black',
-      display: 'flex', zIndex: 40, paddingBottom: 'env(safe-area-inset-bottom, 4px)',
-    }}>
-      {NAV_TABS.map(t => (
-        <button
-          key={t.id}
-          onClick={() => setActive(t.id)}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-            padding: '8px 2px 4px', background: 'none', border: 'none', cursor: 'pointer',
-            position: 'relative',
-          }}
-        >
-          {active === t.id && (
-            <span style={{ position: 'absolute', top: 4, width: 6, height: 6, borderRadius: '50%', background: t.color }} />
-          )}
-          <span style={{ fontSize: 20, lineHeight: 1 }}>{t.emoji}</span>
-          <span style={{ fontSize: 9, fontWeight: 700, marginTop: 2, color: active === t.id ? t.color : '#888', letterSpacing: 0.5 }}>
-            {t.label}
-          </span>
+    <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 480, background: 'white', borderTop: '2px solid black', display: 'flex', zIndex: 30, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      {navItems.map(n => (
+        <button key={n.key} onClick={() => setTab(n.key)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 0 6px', background: 'none', border: 'none', cursor: 'pointer', gap: 2 }}>
+          {tab === n.key && <div style={{ width: 6, height: 6, borderRadius: 99, background: n.color, marginBottom: 2 }} />}
+          {tab !== n.key && <div style={{ width: 6, height: 6, marginBottom: 2 }} />}
+          <span style={{ fontSize: 18 }}>{n.emoji}</span>
+          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: tab === n.key ? n.color : '#9CA3AF', textTransform: 'uppercase' }}>{n.label}</span>
         </button>
       ))}
     </div>
   )
 }
 
-// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
-function LoginScreen() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState(null)
-
-  async function handleLogin() {
-    setLoading(true)
-    setError(null)
-    try {
-      await signInWithPopup(auth, googleProvider)
-    } catch (e) {
-      setError('Não foi possível entrar. Tente novamente.')
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div style={{ minHeight: '100vh', background: P.cream, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ background: P.red, backgroundImage: stripe('light'), paddingTop: 40, paddingBottom: 0 }}>
-        <div style={{ padding: '0 24px 20px' }}>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>✦ seu painel de vida</p>
-          <h1 className="font-display" style={{ fontSize: 56, color: 'white', lineHeight: 1, marginBottom: 8 }}>A Vida<br />Toda ✦</h1>
-          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 16, fontStyle: 'italic' }}>tudo da sua vida, num só lugar</p>
-        </div>
-        <ScallopBorder />
-      </div>
-
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 32px', gap: 24 }}>
-        <div style={{ width: '100%', maxWidth: 360 }}>
-          {[
-            { emoji: '📚', text: 'Acompanhe livros e cursos' },
-            { emoji: '💼', text: 'Gerencie marcas e pipeline' },
-            { emoji: '🌸', text: 'Hábitos, metas e humor' },
-            { emoji: '🏡', text: 'Organize sua casa e compras' },
-            { emoji: '💰', text: 'Controle financeiro completo' },
-            { emoji: '📝', text: 'Notas e lembretes' },
-          ].map(f => (
-            <div key={f.emoji} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-              <span style={{ fontSize: 24, flexShrink: 0 }}>{f.emoji}</span>
-              <p style={{ fontSize: 15, fontWeight: 600, color: P.dark }}>{f.text}</p>
-            </div>
-          ))}
-        </div>
-
-        {error && <p style={{ color: P.red, fontSize: 14, fontWeight: 600 }}>{error}</p>}
-
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          style={{
-            background: P.dark, color: 'white', border: '2.5px solid black',
-            borderRadius: 16, padding: '14px 32px', fontWeight: 800, fontSize: 16,
-            cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1,
-            boxShadow: '4px 4px 0 black', width: '100%', maxWidth: 360,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-          }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-          </svg>
-          {loading ? 'Entrando...' : 'Entrar com Google'}
-        </button>
-
-        <p style={{ fontSize: 12, color: '#aaa', textAlign: 'center', maxWidth: 280 }}>
-          Seus dados são salvos com segurança no Firebase e acessíveis apenas por você.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-// ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
-function Dashboard({ user }) {
-  const [activeTab, setActiveTab] = useState('home')
-
-  const books         = useCol(user.uid, 'books')
-  const courses       = useCol(user.uid, 'courses')
-  const brands        = useCol(user.uid, 'brands')
-  const tasks         = useCol(user.uid, 'tasks')
-  const habits        = useCol(user.uid, 'habits')
-  const habitLogs     = useCol(user.uid, 'habitLogs')
-  const accounts      = useCol(user.uid, 'accounts')
-  const shopping      = useCol(user.uid, 'shopping')
-  const cleaningTasks = useCol(user.uid, 'cleaningTasks')
-  const notes         = useCol(user.uid, 'notes')
-
-  const homeData = {
-    books:         books.data,
-    courses:       courses.data,
-    brands:        brands.data,
-    tasks:         tasks.data,
-    habits:        habits.data,
-    habitLogs:     habitLogs.data,
-    accounts:      accounts.data,
-    shopping:      shopping.data,
-    cleaningTasks: cleaningTasks.data,
-    notes:         notes.data,
-  }
-
-  return (
-    <div style={{ background: P.cream, minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative' }}>
-      <div className="slide-in" key={activeTab}>
-        {activeTab === 'home'     && <HomeTab     userId={user.uid} setActiveTab={setActiveTab} data={homeData} />}
-        {activeTab === 'estudos'  && <EstudosTab  userId={user.uid} />}
-        {activeTab === 'trabalho' && <TrabalhoTab userId={user.uid} />}
-        {activeTab === 'vida'     && <VidaTab     userId={user.uid} />}
-        {activeTab === 'casa'     && <CasaTab     userId={user.uid} />}
-        {activeTab === 'financas' && <FinancasTab userId={user.uid} />}
-        {activeTab === 'notas'    && <NotasTab    userId={user.uid} />}
-      </div>
-      <BottomNav active={activeTab} setActive={setActiveTab} />
-    </div>
-  )
-}
-
-// ─── APP ROOT ─────────────────────────────────────────────────────────────────
+// ─── APP ─────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [user,    setUser]    = useState(undefined)
-  const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState('home')
+  const [showNotes, setShowNotes] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
-  useEffect(() => {
-    return onAuthStateChanged(auth, u => {
-      setUser(u || null)
-      setLoading(false)
-    })
-  }, [])
-
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: P.cream, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-        <h1 className="font-display" style={{ fontSize: 40, color: P.red }}>A Vida Toda ✦</h1>
-        <p style={{ color: '#888', fontSize: 14 }}>carregando...</p>
-      </div>
-    )
-  }
-
-  if (!user) return <LoginScreen />
-
-  return <Dashboard user={user} />
+  return (
+    <div style={{ background: P.cream, minHeight: '100vh', maxWidth: 480, margin: '0 auto', position: 'relative', fontFamily: 'Inter,system-ui,sans-serif' }}>
+      {tab === 'home' && <HomeTab setTab={setTab} onNotes={() => setShowNotes(true)} onSettings={() => setShowSettings(true)} />}
+      {tab === 'estudos' && <EstudosTab />}
+      {tab === 'trabalho' && <TrabalhoTab />}
+      {tab === 'vida' && <VidaTab />}
+      {tab === 'casa' && <CasaTab />}
+      {tab === 'financas' && <FinancasTab />}
+      {showNotes && <NotasPanel onClose={() => setShowNotes(false)} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      <BottomNav tab={tab} setTab={setTab} />
+    </div>
+  )
 }
