@@ -50,7 +50,7 @@ const TABS = [
 /* ─── Notifications ──────────────────────────────────────────────────────────── */
 const Notif = {
   supported: () => "Notification" in window,
-  granted: () => Notification.permission === "granted",
+  granted: () => Notif.supported() && Notification.permission === "granted",
   request: async () => {
     if (!Notif.supported()) return false;
     const p = await Notification.requestPermission();
