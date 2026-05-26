@@ -234,6 +234,26 @@ export function TabTrabalho() {
   const removeObjective = (oid) => setOkrs(okrs.filter(o => o.id !== oid));
   const addObjective = () => setOkrs([...okrs, { id:`o${Date.now()}`, o:"novo objetivo", krs:[] }]);
 
+  const exportCSV = () => {
+    const headers = TABLE_COLS.map(c => c.label).join(",");
+    const rows = sortedPipeline.map(b =>
+      TABLE_COLS.map(c => {
+        const v = b[c.key];
+        if (c.type === "bool")   return v ? "Sim" : "Não";
+        if (c.type === "number") return v ?? 0;
+        return `"${String(v ?? "").replace(/"/g, '""')}"`;
+      }).join(",")
+    );
+    const csv = [headers, ...rows].join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pipeline_${new Date().toLocaleDateString("pt-BR").replace(/\//g,"-")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <div className="row between" style={{ marginBottom: 18, flexWrap:"wrap", gap:12 }}>
@@ -250,11 +270,20 @@ export function TabTrabalho() {
 
       {/* ── PIPELINE ── */}
       <Card className="mb-3">
-        <div className="row between" style={{ marginBottom: 16 }}>
+        <div className="row between" style={{ marginBottom: 16, flexWrap:"wrap", gap:8 }}>
           <CardHeader title="Pipeline de Hunting" hand="Not initiated → Onboarded" />
-          <button className="btn ghost sm" onClick={() => setTableView(v => !v)}>
-            {tableView ? "ver cards" : "ver tabela"}
-          </button>
+          <div className="row" style={{ gap:8, flexWrap:"wrap" }}>
+            <a href="https://meli.lightning.force.com/lightning/page/home" target="_blank" rel="noopener noreferrer"
+              style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"4px 12px",
+                background:"#0070d2", color:"#fff", border:"2px solid var(--ink)", borderRadius:20,
+                fontSize:11, fontWeight:600, textDecoration:"none", letterSpacing:".01em" }}>
+              ⚡ Salesforce
+            </a>
+            <button className="btn ghost sm" onClick={exportCSV}>↓ exportar CSV</button>
+            <button className="btn ghost sm" onClick={() => setTableView(v => !v)}>
+              {tableView ? "ver cards" : "ver tabela"}
+            </button>
+          </div>
         </div>
 
         {!tableView ? (
