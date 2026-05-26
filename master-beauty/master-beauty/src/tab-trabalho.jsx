@@ -29,16 +29,20 @@ const defaultPipeline = [
   { id:"pipe5", name:"Cosméticos V", stage:"Onboarded", sellerOrBrand:"Seller", priority:"Baixa", createdAt:"01/03", updatedAt:"15/05", segment:"Skincare", gmvMonth:20000, gmvYear:240000, tiktok:false, shoppee:true, meeting:false, meetingDate:"", notes:"Onboarding concluído ✓" },
 ];
 
-function BrandCard({ brand, onUpdate, onDelete }) {
+function BrandCard({ brand, onUpdate, onDelete, onDragStart }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div style={{
-      background: "var(--paper)",
-      border: "2px solid var(--ink)",
-      borderRadius: 12,
-      padding: "10px 12px",
-      marginBottom: 8,
-    }}>
+    <div
+      draggable
+      onDragStart={onDragStart}
+      style={{
+        background: "var(--paper)",
+        border: "2px solid var(--ink)",
+        borderRadius: 12,
+        padding: "10px 12px",
+        marginBottom: 8,
+        cursor: "grab",
+      }}>
       {/* Header clicável */}
       <div className="row between" style={{ cursor:"pointer" }} onClick={() => setExpanded(e => !e)}>
         <div style={{ fontWeight:600, fontSize:13, flex:1 }}>
@@ -141,8 +145,45 @@ export function TabTrabalho() {
     segment:"", gmvMonth:0, gmvYear:0, tiktok:false, shoppee:false, meeting:false, meetingDate:"", notes:"",
   }]);
 
-  // Vista de tabela
+  // Vista de tabela + ordenação
   const [tableView, setTableView] = useState(false);
+  const [dragOverStage, setDragOverStage] = useState(null);
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
+
+  const TABLE_COLS = [
+    { label:"Nome",        key:"name",          type:"string" },
+    { label:"Stage",       key:"stage",         type:"stage" },
+    { label:"Tipo",        key:"sellerOrBrand",  type:"string" },
+    { label:"Prioridade",  key:"priority",      type:"priority" },
+    { label:"Segmento",    key:"segment",       type:"string" },
+    { label:"GMV mês",     key:"gmvMonth",      type:"number" },
+    { label:"GMV ano",     key:"gmvYear",       type:"number" },
+    { label:"TikTok",      key:"tiktok",        type:"bool" },
+    { label:"Shoppee",     key:"shoppee",       type:"bool" },
+    { label:"Reunião",     key:"meeting",       type:"bool" },
+    { label:"Data",        key:"meetingDate",   type:"string" },
+    { label:"Observações", key:"notes",         type:"string" },
+  ];
+  const PRIORITY_ORDER = { Alta:0, Média:1, Baixa:2 };
+
+  const cycleSort = (key) => {
+    setSort(prev =>
+      prev.key !== key ? { key, dir:"asc" }
+      : prev.dir === "asc" ? { key, dir:"desc" }
+      : { key: null, dir:"asc" }
+    );
+  };
+
+  const sortedPipeline = [...pipeline].sort((a, b) => {
+    if (!sort.key) return 0;
+    const col = TABLE_COLS.find(c => c.key === sort.key);
+    const mult = sort.dir === "asc" ? 1 : -1;
+    if (col?.type === "number") return mult * (a[sort.key] - b[sort.key]);
+    if (col?.type === "bool")   return mult * ((a[sort.key] ? 1 : 0) - (b[sort.key] ? 1 : 0));
+    if (col?.type === "priority") return mult * ((PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9));
+    if (col?.type === "stage") return mult * (PIPE_STAGES.indexOf(a.stage) - PIPE_STAGES.indexOf(b.stage));
+    return mult * String(a[sort.key] ?? "").localeCompare(String(b[sort.key] ?? ""), "pt-BR");
+  });
 
   // Acionáveis / tarefas de hunting
   const [actionables, setActionables] = useLocalState("isa.trabalho.actionables", [
@@ -219,14 +260,31 @@ export function TabTrabalho() {
           <div style={{ display:"flex", gap:16, overflowX:"auto", paddingBottom:8, alignItems:"flex-start" }}>
             {PIPE_STAGES.map(stage => {
               const brands = pipeline.filter(b => b.stage === stage);
+              const isOver = dragOverStage === stage;
               return (
-                <div key={stage} style={{ minWidth:220, flex:"0 0 220px" }}>
+                <div key={stage}
+                  onDragOver={e => { e.preventDefault(); setDragOverStage(stage); }}
+                  onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOverStage(null); }}
+                  onDrop={e => {
+                    e.preventDefault();
+                    const id = e.dataTransfer.getData("brandId");
+                    if (id) moveBrand(id, stage);
+                    setDragOverStage(null);
+                  }}
+                  style={{
+                    minWidth:220, flex:"0 0 220px",
+                    borderRadius:10,
+                    outline: isOver ? "2px dashed var(--terracotta)" : "2px solid transparent",
+                    padding: 4,
+                    transition: "outline 0.1s",
+                  }}>
                   {/* Cabeçalho da coluna */}
                   <div className="row between" style={{
                     marginBottom:10, padding:"6px 10px",
-                    background: STAGE_BG[stage],
+                    background: isOver ? STAGE_COLORS[stage] : STAGE_BG[stage],
                     border:"1.5px solid var(--ink)",
                     borderRadius:8,
+                    transition: "background 0.1s",
                   }}>
                     <span style={{ fontWeight:600, fontSize:12 }}>{stage}</span>
                     <span style={{
@@ -243,22 +301,9 @@ export function TabTrabalho() {
                   {brands.map(b => (
                     <BrandCard key={b.id} brand={b}
                       onUpdate={patch => updateBrand(b.id, patch)}
-                      onDelete={() => removeBrand(b.id)} />
+                      onDelete={() => removeBrand(b.id)}
+                      onDragStart={e => { e.dataTransfer.setData("brandId", b.id); e.dataTransfer.effectAllowed = "move"; }} />
                   ))}
-                  {/* Mover seleção */}
-                  {brands.length > 0 && (
-                    <div style={{ marginBottom:6 }}>
-                      {brands.map(b => (
-                        <div key={b.id} style={{ fontSize:10, color:"var(--ink-mute)", marginBottom:2 }}>
-                          mover <span style={{ fontWeight:600 }}>{b.name.split(" ")[0]}</span>:{" "}
-                          {PIPE_STAGES.filter(s => s !== stage).map(s => (
-                            <button key={s} onClick={() => moveBrand(b.id, s)}
-                              className="btn ghost sm" style={{ fontSize:9, padding:"1px 5px", marginRight:2 }}>→ {s.split(" ")[0]}</button>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  )}
                   <button className="btn ghost sm" style={{ width:"100%", fontSize:11, marginTop:4 }}
                     onClick={() => addBrand("nova marca", stage)}>+ marca</button>
                 </div>
@@ -271,13 +316,17 @@ export function TabTrabalho() {
             <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
               <thead>
                 <tr style={{ background:"var(--cream-deep)" }}>
-                  {["Nome","Stage","Tipo","Prioridade","Segmento","GMV mês","GMV ano","TikTok","Shoppee","Reunião","Data","Observações",""].map(h => (
-                    <th key={h} style={{ padding:"6px 10px", textAlign:"left", border:"1px solid var(--ink)", fontFamily:"var(--font-display)", fontSize:11, whiteSpace:"nowrap" }}>{h}</th>
+                  {TABLE_COLS.map(col => (
+                    <th key={col.key} onClick={() => cycleSort(col.key)}
+                      style={{ padding:"6px 10px", textAlign:"left", border:"1px solid var(--ink)", fontFamily:"var(--font-display)", fontSize:11, whiteSpace:"nowrap", cursor:"pointer", userSelect:"none" }}>
+                      {col.label}{sort.key === col.key ? (sort.dir === "asc" ? " ▲" : " ▼") : ""}
+                    </th>
                   ))}
+                  <th style={{ padding:"6px 10px", border:"1px solid var(--ink)", width:32 }}></th>
                 </tr>
               </thead>
               <tbody>
-                {pipeline.map((b, i) => (
+                {sortedPipeline.map((b, i) => (
                   <tr key={b.id} style={{ background: i%2===0 ? "var(--paper)" : "var(--cream)" }}>
                     <td style={{ padding:"5px 10px", border:"1px solid rgba(42,31,23,0.18)", fontWeight:600 }}>
                       <InlineEdit value={b.name} onChange={v => updateBrand(b.id, { name:v })} />
