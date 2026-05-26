@@ -49,9 +49,11 @@ function BrandCard({ brand, onUpdate, onDelete, onDragStart }) {
           <InlineEdit value={brand.name} onChange={v => onUpdate({ name: v })} />
         </div>
         <div className="row" style={{ gap:4 }}>
-          <span className={`chip ${PRIORITY_CHIP[brand.priority] || ""}`} style={{ fontSize:10, padding:"2px 6px" }}>
-            {brand.priority}
-          </span>
+          {brand.segment && (
+            <span className="chip" style={{ fontSize:10, padding:"2px 6px", background:"var(--cream-deep)", border:"1px solid var(--ink)" }}>
+              {brand.segment}
+            </span>
+          )}
           <span style={{ color:"var(--ink-mute)", fontSize:12 }}>{expanded ? "▲" : "▼"}</span>
         </div>
       </div>
