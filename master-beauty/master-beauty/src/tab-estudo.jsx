@@ -4,6 +4,19 @@ import {
   InlineEdit, AddRow, DeleteBtn,
 } from './shared.jsx';
 
+function StarRating({ value = 0, onChange }) {
+  return (
+    <div className="row" style={{ gap: 2 }}>
+      {[1,2,3,4,5].map(s => (
+        <span key={s} onClick={() => onChange(s === value ? 0 : s)}
+          style={{ cursor:"pointer", fontSize:18, color: s <= value ? "var(--mustard)" : "var(--ink-mute)", userSelect:"none" }}>
+          {s <= value ? "★" : "☆"}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function TabEstudo() {
   const [tasks, setTasks] = useLocalState("isa.estudo.tasks", [
     { id:"e1", label:"Capítulo 4 — A Hipótese do Amor", due:"hoje", done:false },
@@ -32,18 +45,18 @@ export function TabEstudo() {
       { id:"bq4", t:"Mulheres que correm com os lobos", a:"Estés", c:"var(--rose-deep)" },
     ],
     lidos: [
-      { id:"bd1", t:"Lessons in Chemistry", a:"Garmus", c:"var(--olive-deep)" },
-      { id:"bd2", t:"O Conto da Aia", a:"Atwood", c:"var(--terracotta-deep)" },
-      { id:"bd3", t:"Babel", a:"R.F. Kuang", c:"var(--blue-deep)" },
-      { id:"bd4", t:"Pequena Coreografia do Adeus", a:"Lara", c:"var(--plum)" },
-      { id:"bd5", t:"Pachinko", a:"Min Jin Lee", c:"var(--mustard)" },
+      { id:"bd1", t:"Lessons in Chemistry", a:"Garmus", c:"var(--olive-deep)", rating:5 },
+      { id:"bd2", t:"O Conto da Aia", a:"Atwood", c:"var(--terracotta-deep)", rating:5 },
+      { id:"bd3", t:"Babel", a:"R.F. Kuang", c:"var(--blue-deep)", rating:4 },
+      { id:"bd4", t:"Pequena Coreografia do Adeus", a:"Lara", c:"var(--plum)", rating:4 },
+      { id:"bd5", t:"Pachinko", a:"Min Jin Lee", c:"var(--mustard)", rating:5 },
     ],
   });
   const addBook = (shelf, title) => {
     if (!title) return;
     const id = `b${shelf[0]}${Date.now()}`;
     const c = COLORS[Math.floor(Math.random()*COLORS.length)];
-    const entry = shelf === "lendo" ? { id, t:title, a:"—", c, p:0 } : { id, t:title, a:"—", c };
+    const entry = shelf === "lendo" ? { id, t:title, a:"—", c, p:0 } : shelf === "lidos" ? { id, t:title, a:"—", c, rating:0 } : { id, t:title, a:"—", c };
     setBooks({ ...books, [shelf]: [...books[shelf], entry] });
   };
   const updateBook = (shelf, id, patch) => {
@@ -55,10 +68,11 @@ export function TabEstudo() {
   const moveBook = (fromShelf, id, toShelf) => {
     const b = books[fromShelf].find(x => x.id === id);
     if (!b) return;
+    const entry = toShelf === "lidos" ? { ...b, rating: b.rating ?? 0 } : b;
     setBooks({
       ...books,
       [fromShelf]: books[fromShelf].filter(x => x.id !== id),
-      [toShelf]: [...books[toShelf], b],
+      [toShelf]: [...books[toShelf], entry],
     });
   };
 
@@ -99,6 +113,7 @@ export function TabEstudo() {
         </div>
       </div>
 
+      {/* Cronograma + Tarefas */}
       <div className="grid cols-12" style={{ marginBottom: 24 }}>
         <Card className="span-7">
           <CardHeader title="Cronograma" hand="horas / meta semanal" />
@@ -152,7 +167,9 @@ export function TabEstudo() {
         </Card>
       </div>
 
+      {/* Livros */}
       <div className="grid cols-3" style={{ marginBottom: 24 }}>
+        {/* Lendo agora */}
         <Card>
           <CardHeader title="Lendo agora" hand={`${books.lendo.length} livros`} />
           <div className="col" style={{ gap: 12 }}>
@@ -183,6 +200,7 @@ export function TabEstudo() {
           </div>
         </Card>
 
+        {/* Quero ler */}
         <Card>
           <CardHeader title="Quero ler" hand={`${books.quero.length} na fila`} />
           <div className="shelf">
@@ -205,6 +223,7 @@ export function TabEstudo() {
           <AddRow onAdd={(t) => addBook("quero", t)} placeholder="+ quero ler..." buttonClass="ghost" />
         </Card>
 
+        {/* Já lidos — com estrelas */}
         <Card>
           <CardHeader title="Já lidos" hand={`${books.lidos.length} este ano`} />
           <div className="shelf">
@@ -212,11 +231,14 @@ export function TabEstudo() {
               <div key={b.id} className="book" style={{ background: b.c }} title={b.t}>{b.t}</div>
             ))}
           </div>
-          <div className="col" style={{ gap:4, marginTop:10 }}>
+          <div className="col" style={{ gap:6, marginTop:10 }}>
             {books.lidos.map(b => (
-              <div key={b.id} className="row" style={{ fontSize:12, padding:"3px 0", borderBottom:"1px dashed rgba(42,31,23,0.18)" }}>
-                <span className="flex1"><InlineEdit value={b.t} onChange={(v) => updateBook("lidos", b.id, { t:v })} /></span>
-                <DeleteBtn onClick={() => removeBook("lidos", b.id)} />
+              <div key={b.id} style={{ padding:"5px 0", borderBottom:"1px dashed rgba(42,31,23,0.18)" }}>
+                <div className="row" style={{ fontSize:12, gap:6 }}>
+                  <span className="flex1"><InlineEdit value={b.t} onChange={(v) => updateBook("lidos", b.id, { t:v })} /></span>
+                  <DeleteBtn onClick={() => removeBook("lidos", b.id)} />
+                </div>
+                <StarRating value={b.rating ?? 0} onChange={v => updateBook("lidos", b.id, { rating: v })} />
               </div>
             ))}
           </div>
@@ -225,6 +247,7 @@ export function TabEstudo() {
         </Card>
       </div>
 
+      {/* Flashcards */}
       <Card className="mb-3">
         <CardHeader title="Resumos & Flashcards" hand="clique pra revelar" action={<button className="btn sm olive" onClick={addFC}>+ novo card</button>} />
         <div className="grid cols-4" style={{ gap: 12 }}>
