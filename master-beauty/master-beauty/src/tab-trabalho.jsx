@@ -273,6 +273,7 @@ export function TabTrabalho() {
     { id:"l1", label:"Salesforce", url:"https://meli.lightning.force.com/lightning/page/home", color:"blue" },
     { id:"l2", label:"ML Seller Center", url:"https://www.mercadolivre.com.br/", color:"mustard" },
   ]);
+  const sortedLinks = [...links].sort((a, b) => a.label.localeCompare(b.label, "pt-BR", { sensitivity:"base" }));
   const [newLink, setNewLink] = useState({ label:"", url:"" });
   const addLink = () => {
     const url = newLink.url.trim();
@@ -589,7 +590,7 @@ export function TabTrabalho() {
       <Card>
         <CardHeader title="Links úteis" hand="acesso rápido" />
         <div className="row" style={{ flexWrap:"wrap", gap:10, marginBottom:14 }}>
-          {links.map(l => (
+          {sortedLinks.map(l => (
             <div key={l.id} className={`chip ${l.color}`}
               style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, paddingRight:22, position:"relative" }}>
               <a href={l.url} target="_blank" rel="noopener noreferrer"
