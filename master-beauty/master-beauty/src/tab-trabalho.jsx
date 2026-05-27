@@ -268,6 +268,23 @@ export function TabTrabalho() {
     setActiveNote(id);
   };
 
+  // Links úteis
+  const [links, setLinks] = useLocalState("isa.trabalho.links", [
+    { id:"l1", label:"Salesforce", url:"https://meli.lightning.force.com/lightning/page/home", color:"blue" },
+    { id:"l2", label:"ML Seller Center", url:"https://www.mercadolivre.com.br/", color:"mustard" },
+  ]);
+  const [newLink, setNewLink] = useState({ label:"", url:"" });
+  const addLink = () => {
+    const url = newLink.url.trim();
+    const label = newLink.label.trim() || url;
+    if (!url) return;
+    const colors = ["blue","mustard","terracotta","olive","rose"];
+    setLinks([...links, { id:`l${Date.now()}`, label, url, color: colors[links.length % colors.length] }]);
+    setNewLink({ label:"", url:"" });
+  };
+  const updateLink = (id, patch) => setLinks(links.map(l => l.id === id ? { ...l, ...patch } : l));
+  const removeLink = (id) => setLinks(links.filter(l => l.id !== id));
+
   // OKRs
   const [okrs, setOkrs] = useLocalState("isa.trabalho.okrs", [
     { id:"o1", o:"Crescer GMV de beleza premium", krs:[
@@ -567,6 +584,37 @@ export function TabTrabalho() {
           </div>
         </Card>
       </div>
+
+      {/* ── LINKS ÚTEIS ── */}
+      <Card>
+        <CardHeader title="Links úteis" hand="acesso rápido" />
+        <div className="row" style={{ flexWrap:"wrap", gap:10, marginBottom:14 }}>
+          {links.map(l => (
+            <div key={l.id} className={`chip ${l.color}`}
+              style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:12, fontWeight:600, paddingRight:22, position:"relative" }}>
+              <a href={l.url} target="_blank" rel="noopener noreferrer"
+                style={{ color:"inherit", textDecoration:"none", opacity:.65, fontSize:11, flexShrink:0 }}
+                title={l.url}>↗</a>
+              <InlineEdit value={l.label} onChange={v => updateLink(l.id, { label: v })} />
+              <button onClick={() => removeLink(l.id)}
+                style={{ position:"absolute", right:5, top:"50%", transform:"translateY(-50%)",
+                  background:"none", border:"none", cursor:"pointer", fontSize:10, lineHeight:1,
+                  color:"inherit", opacity:.55, padding:0 }}>×</button>
+            </div>
+          ))}
+        </div>
+        <div className="row" style={{ gap:8, flexWrap:"wrap" }}>
+          <input className="input" placeholder="nome do link" value={newLink.label}
+            style={{ flex:"1 1 130px", minWidth:0 }}
+            onChange={e => setNewLink(p => ({ ...p, label: e.target.value }))}
+            onKeyDown={e => e.key === "Enter" && addLink()} />
+          <input className="input" placeholder="https://..." value={newLink.url}
+            style={{ flex:"2 1 220px", minWidth:0 }}
+            onChange={e => setNewLink(p => ({ ...p, url: e.target.value }))}
+            onKeyDown={e => e.key === "Enter" && addLink()} />
+          <button className="btn blue sm" onClick={addLink}>+ link</button>
+        </div>
+      </Card>
     </div>
   );
 }
