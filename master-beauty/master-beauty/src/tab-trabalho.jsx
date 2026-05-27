@@ -286,23 +286,30 @@ export function TabTrabalho() {
   const updateLink = (id, patch) => setLinks(links.map(l => l.id === id ? { ...l, ...patch } : l));
   const removeLink = (id) => setLinks(links.filter(l => l.id !== id));
 
-  // OKRs
-  const [okrs, setOkrs] = useLocalState("isa.trabalho.okrs", [
-    { id:"o1", o:"Crescer GMV de beleza premium", krs:[
-      { id:"k1", t:"Trazer 8 marcas novas no semestre", v:5, m:8 },
-      { id:"k2", t:"Negociar take rate +1.5pp em top-20", v:9, m:20 },
-    ]},
-    { id:"o2", o:"Tornar-se referência no setor", krs:[
-      { id:"k3", t:"1 palestra externa no semestre", v:0, m:1 },
-      { id:"k4", t:"Curso de Negociação Avançada", v:60, m:100 },
-    ]},
+  // Marcas para avaliar (radar)
+  const [prospects, setProspects] = useLocalState("isa.trabalho.prospects", [
+    { id:"pr1", name:"Marca Alpha", segment:"Skincare", sellerOrBrand:"Brand", tiktok:true, shoppee:false, gmvEst:"R$ 40k/mês", notes:"Instagram forte, sem ML ainda", verdict:"pendente" },
+    { id:"pr2", name:"Beta Beauty", segment:"Maquiagem", sellerOrBrand:"Seller", tiktok:false, shoppee:true, gmvEst:"R$ 20k/mês", notes:"", verdict:"sim" },
   ]);
-  const updateOkr = (oid, patch) => setOkrs(okrs.map(o => o.id === oid ? { ...o, ...patch } : o));
-  const updateKr = (oid, kid, patch) => setOkrs(okrs.map(o => o.id === oid ? { ...o, krs:o.krs.map(k => k.id === kid ? { ...k, ...patch } : k) } : o));
-  const removeKr = (oid, kid) => setOkrs(okrs.map(o => o.id === oid ? { ...o, krs:o.krs.filter(k => k.id !== kid) } : o));
-  const addKr = (oid) => setOkrs(okrs.map(o => o.id === oid ? { ...o, krs:[...o.krs, { id:`k${Date.now()}`, t:"novo resultado-chave", v:0, m:1 }] } : o));
-  const removeObjective = (oid) => setOkrs(okrs.filter(o => o.id !== oid));
-  const addObjective = () => setOkrs([...okrs, { id:`o${Date.now()}`, o:"novo objetivo", krs:[] }]);
+  const updateProspect = (id, patch) => setProspects(prospects.map(p => p.id === id ? { ...p, ...patch } : p));
+  const removeProspect = (id) => setProspects(prospects.filter(p => p.id !== id));
+  const addProspect = () => setProspects([...prospects, {
+    id:`pr${Date.now()}`, name:"nova marca", segment:"", sellerOrBrand:"Brand",
+    tiktok:false, shoppee:false, gmvEst:"", notes:"", verdict:"pendente",
+  }]);
+  const promoteProspect = (p) => {
+    const d = new Date();
+    const today = `${d.getDate()}/${d.getMonth()+1}`;
+    setPipeline(prev => [...prev, {
+      id:`pipe${Date.now()}`, name:p.name, stage:"Not initiated", custId:"",
+      sellerOrBrand:p.sellerOrBrand, priority:"Média",
+      createdAt:today, updatedAt:today,
+      segment:p.segment, gmvMonth:0, gmvYear:0,
+      tiktok:p.tiktok, shoppee:p.shoppee,
+      meeting:false, meetingDate:"", notes:p.notes,
+    }]);
+    removeProspect(p.id);
+  };
 
   const exportCSV = () => {
     const headers = TABLE_COLS.map(c => c.label).join(",");
@@ -547,41 +554,64 @@ export function TabTrabalho() {
         </Card>
 
         <Card className="span-5">
-          <CardHeader title="Carreira & OKRs" hand="2º semestre 2026" action={<button className="btn sm olive" onClick={addObjective}>+ objetivo</button>} />
-          <div className="col" style={{ gap:16 }}>
-            {okrs.map(o => (
-              <div key={o.id}>
-                <div className="row between mb-1">
-                  <div className="bold" style={{ fontSize:14, flex:1 }}>
-                    <InlineEdit value={o.o} onChange={v => updateOkr(o.id, { o:v })} />
-                  </div>
-                  <DeleteBtn onClick={() => removeObjective(o.id)} />
-                </div>
-                {o.krs.map((kr, j) => (
-                  <div key={kr.id} className="row" style={{ alignItems:"flex-start", gap:6, marginBottom:6 }}>
-                    <div style={{ flex:1 }}>
-                      <div className="row between" style={{ marginBottom:3 }}>
-                        <div style={{ fontSize:13 }}><InlineEdit value={kr.t} onChange={v => updateKr(o.id, kr.id, { t:v })} /></div>
-                        <div style={{ fontFamily:"var(--font-mono)", fontSize:11 }}>
-                          <input type="number" value={kr.v} min={0}
-                            onChange={e => updateKr(o.id, kr.id, { v: +e.target.value })}
-                            style={{ width:42, border:"1.5px dashed var(--ink)", background:"var(--paper)", borderRadius:4, padding:"1px 4px", fontFamily:"var(--font-mono)", textAlign:"right" }} />
-                          {" / "}
-                          <input type="number" value={kr.m} min={1}
-                            onChange={e => updateKr(o.id, kr.id, { m: +e.target.value })}
-                            style={{ width:42, border:"1.5px dashed var(--ink)", background:"var(--paper)", borderRadius:4, padding:"1px 4px", fontFamily:"var(--font-mono)", textAlign:"right" }} />
-                        </div>
-                      </div>
-                      <div className="bar-track" style={{ height:10 }}>
-                        <div className="bar-fill" style={{ width:`${Math.min(100,(kr.v/kr.m)*100)}%`, background:["var(--terracotta)","var(--olive)","var(--blue)","var(--mustard)"][j%4] }}></div>
-                      </div>
+          <CardHeader title="Radar de marcas" hand="avaliar antes de entrar no pipe"
+            action={<button className="btn sm" onClick={addProspect}>+ marca</button>} />
+          <div className="col" style={{ gap:8, maxHeight:400, overflowY:"auto" }}>
+            {prospects.map(p => {
+              const bg = p.verdict==="sim" ? "#edf7ed" : p.verdict==="não" ? "#fdecea" : "var(--paper)";
+              return (
+                <div key={p.id} style={{ border:"1.5px solid var(--ink)", borderRadius:10, padding:"8px 10px", background:bg }}>
+                  {/* linha 1: nome + veredicto + lixo */}
+                  <div className="row between" style={{ gap:6, marginBottom:6 }}>
+                    <div style={{ fontWeight:600, fontSize:13, flex:1 }}>
+                      <InlineEdit value={p.name} onChange={v => updateProspect(p.id, { name:v })} />
                     </div>
-                    <DeleteBtn onClick={() => removeKr(o.id, kr.id)} />
+                    <select value={p.verdict} onChange={e => updateProspect(p.id, { verdict:e.target.value })}
+                      className={`chip ${p.verdict==="sim"?"olive":p.verdict==="não"?"terracotta":"mustard"}`}
+                      style={{ fontSize:10, appearance:"none", cursor:"pointer", padding:"2px 8px" }}>
+                      <option value="pendente">pendente</option>
+                      <option value="sim">✓ sim</option>
+                      <option value="não">✗ não</option>
+                    </select>
+                    <DeleteBtn onClick={() => removeProspect(p.id)} />
                   </div>
-                ))}
-                <button className="btn ghost sm" onClick={() => addKr(o.id)} style={{ fontSize:11 }}>+ resultado-chave</button>
-              </div>
-            ))}
+                  {/* linha 2: segmento + tipo + plataformas */}
+                  <div className="row" style={{ gap:6, flexWrap:"wrap", alignItems:"center", fontSize:11 }}>
+                    <div style={{ minWidth:110 }}>
+                      <SegmentSelect value={p.segment} options={segmentOptions}
+                        onChange={v => updateProspect(p.id, { segment:v })} onAdd={addSegmentOption}
+                        style={{ fontSize:10, padding:"2px 8px" }} />
+                    </div>
+                    <select value={p.sellerOrBrand} onChange={e => updateProspect(p.id, { sellerOrBrand:e.target.value })}
+                      style={{ fontSize:10, border:"1px solid var(--ink)", borderRadius:6, padding:"2px 6px", background:"var(--paper)", cursor:"pointer" }}>
+                      <option>Seller</option><option>Brand</option>
+                    </select>
+                    <label className="row" style={{ gap:3, cursor:"pointer" }}>
+                      <input type="checkbox" checked={!!p.tiktok} onChange={e => updateProspect(p.id, { tiktok:e.target.checked })} />
+                      TikTok
+                    </label>
+                    <label className="row" style={{ gap:3, cursor:"pointer" }}>
+                      <input type="checkbox" checked={!!p.shoppee} onChange={e => updateProspect(p.id, { shoppee:e.target.checked })} />
+                      Shopee
+                    </label>
+                    <span style={{ color:"var(--ink-mute)", fontFamily:"var(--font-mono)", fontSize:11 }}>
+                      <InlineEdit value={p.gmvEst} onChange={v => updateProspect(p.id, { gmvEst:v })} placeholder="GMV est." />
+                    </span>
+                  </div>
+                  {/* linha 3: notas */}
+                  <div style={{ marginTop:5, fontSize:11, color:"var(--ink-soft)" }}>
+                    <InlineEdit value={p.notes} onChange={v => updateProspect(p.id, { notes:v })} placeholder="observações..." />
+                  </div>
+                  {/* CTA: mover para pipe */}
+                  {p.verdict === "sim" && (
+                    <button className="btn olive sm" style={{ marginTop:6, fontSize:10 }}
+                      onClick={() => promoteProspect(p)}>
+                      → mover para pipe
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </Card>
       </div>
