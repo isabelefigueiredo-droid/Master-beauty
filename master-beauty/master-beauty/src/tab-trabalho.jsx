@@ -22,11 +22,11 @@ const STAGE_BG = {
 const PRIORITY_CHIP = { Alta: "terracotta", Média: "mustard", Baixa: "olive" };
 
 const defaultPipeline = [
-  { id:"pipe1", name:"Skincare Coreana X", stage:"Negotiation", sellerOrBrand:"Brand", priority:"Alta", createdAt:"01/05", updatedAt:"20/05", segment:"Skincare", gmvMonth:50000, gmvYear:600000, tiktok:false, shoppee:true, meeting:true, meetingDate:"26/05", notes:"Proposta enviada" },
-  { id:"pipe2", name:"Perfumaria Y", stage:"Not initiated", sellerOrBrand:"Seller", priority:"Média", createdAt:"10/05", updatedAt:"10/05", segment:"Perfumaria", gmvMonth:30000, gmvYear:360000, tiktok:false, shoppee:false, meeting:false, meetingDate:"", notes:"" },
-  { id:"pipe3", name:"Marca Z Premium", stage:"Setup", sellerOrBrand:"Brand", priority:"Alta", createdAt:"15/04", updatedAt:"22/05", segment:"Maquiagem", gmvMonth:80000, gmvYear:960000, tiktok:true, shoppee:true, meeting:true, meetingDate:"28/05", notes:"Setup em andamento" },
-  { id:"pipe4", name:"BeautyBrand W", stage:"3P Go Live", sellerOrBrand:"Brand", priority:"Alta", createdAt:"01/04", updatedAt:"25/05", segment:"Haircare", gmvMonth:45000, gmvYear:540000, tiktok:true, shoppee:false, meeting:false, meetingDate:"", notes:"Go live semana que vem" },
-  { id:"pipe5", name:"Cosméticos V", stage:"Onboarded", sellerOrBrand:"Seller", priority:"Baixa", createdAt:"01/03", updatedAt:"15/05", segment:"Skincare", gmvMonth:20000, gmvYear:240000, tiktok:false, shoppee:true, meeting:false, meetingDate:"", notes:"Onboarding concluído ✓" },
+  { id:"pipe1", name:"Skincare Coreana X", stage:"Negotiation", custId:"", sellerOrBrand:"Brand", priority:"Alta", createdAt:"01/05", updatedAt:"20/05", segment:"Skincare", gmvMonth:50000, gmvYear:600000, tiktok:false, shoppee:true, meeting:true, meetingDate:"26/05", notes:"Proposta enviada" },
+  { id:"pipe2", name:"Perfumaria Y", stage:"Not initiated", custId:"", sellerOrBrand:"Seller", priority:"Média", createdAt:"10/05", updatedAt:"10/05", segment:"Perfumaria", gmvMonth:30000, gmvYear:360000, tiktok:false, shoppee:false, meeting:false, meetingDate:"", notes:"" },
+  { id:"pipe3", name:"Marca Z Premium", stage:"Setup", custId:"", sellerOrBrand:"Brand", priority:"Alta", createdAt:"15/04", updatedAt:"22/05", segment:"Maquiagem", gmvMonth:80000, gmvYear:960000, tiktok:true, shoppee:true, meeting:true, meetingDate:"28/05", notes:"Setup em andamento" },
+  { id:"pipe4", name:"BeautyBrand W", stage:"3P Go Live", custId:"", sellerOrBrand:"Brand", priority:"Alta", createdAt:"01/04", updatedAt:"25/05", segment:"Haircare", gmvMonth:45000, gmvYear:540000, tiktok:true, shoppee:false, meeting:false, meetingDate:"", notes:"Go live semana que vem" },
+  { id:"pipe5", name:"Cosméticos V", stage:"Onboarded", custId:"", sellerOrBrand:"Seller", priority:"Baixa", createdAt:"01/03", updatedAt:"15/05", segment:"Skincare", gmvMonth:20000, gmvYear:240000, tiktok:false, shoppee:true, meeting:false, meetingDate:"", notes:"Onboarding concluído ✓" },
 ];
 
 function BrandCard({ brand, onUpdate, onDelete, onDragStart }) {
@@ -60,6 +60,7 @@ function BrandCard({ brand, onUpdate, onDelete, onDragStart }) {
       {!expanded && (
         <div style={{ fontSize:11, color:"var(--ink-soft)", marginTop:4 }}>
           {brand.segment} · {formatBRL(brand.gmvMonth)}/mês
+          {brand.custId && <span style={{ marginLeft:6, fontFamily:"var(--font-mono)", color:"var(--ink-mute)" }}>#{brand.custId}</span>}
         </div>
       )}
       {expanded && (
@@ -84,18 +85,25 @@ function BrandCard({ brand, onUpdate, onDelete, onDragStart }) {
               <InlineEdit value={brand.segment} onChange={v => onUpdate({ segment: v })} placeholder="ex: Skincare" />
             </div>
             <div>
-              <div className="hand" style={{ fontSize:13 }}>Criado em</div>
-              <InlineEdit value={brand.createdAt} onChange={v => onUpdate({ createdAt: v })} placeholder="dd/mm" />
+              <div className="hand" style={{ fontSize:13 }}>Cust ID</div>
+              <input value={brand.custId || ""} onChange={e => onUpdate({ custId: e.target.value })}
+                placeholder="ex: 123456789"
+                style={{ width:"100%", border:"1.5px dashed var(--ink)", background:"var(--paper)", borderRadius:4, padding:"2px 6px", fontFamily:"var(--font-mono)", fontSize:12 }} />
             </div>
             <div>
               <div className="hand" style={{ fontSize:13 }}>GMV mês (R$)</div>
-              <input type="number" value={brand.gmvMonth} onChange={e => onUpdate({ gmvMonth: +e.target.value })}
+              <input type="number" value={brand.gmvMonth}
+                onChange={e => { const m = +e.target.value; onUpdate({ gmvMonth: m, gmvYear: m * 12 }); }}
                 style={{ width:"100%", border:"1.5px dashed var(--ink)", background:"var(--paper)", borderRadius:4, padding:"2px 6px", fontFamily:"var(--font-mono)", fontSize:12 }} />
             </div>
             <div>
-              <div className="hand" style={{ fontSize:13 }}>GMV ano (R$)</div>
+              <div className="hand" style={{ fontSize:13 }}>GMV ano (R$) <span style={{ fontWeight:400, opacity:.6 }}>auto · editável</span></div>
               <input type="number" value={brand.gmvYear} onChange={e => onUpdate({ gmvYear: +e.target.value })}
                 style={{ width:"100%", border:"1.5px dashed var(--ink)", background:"var(--paper)", borderRadius:4, padding:"2px 6px", fontFamily:"var(--font-mono)", fontSize:12 }} />
+            </div>
+            <div>
+              <div className="hand" style={{ fontSize:13 }}>Criado em</div>
+              <InlineEdit value={brand.createdAt} onChange={v => onUpdate({ createdAt: v })} placeholder="dd/mm" />
             </div>
           </div>
           <div style={{ marginTop:8, fontSize:12 }}>
@@ -141,7 +149,7 @@ export function TabTrabalho() {
   const removeBrand = (id) => setPipeline(pipeline.filter(b => b.id !== id));
   const moveBrand = (id, stage) => updateBrand(id, { stage });
   const addBrand = (name, stage) => setPipeline([...pipeline, {
-    id:`pipe${Date.now()}`, name, stage, sellerOrBrand:"Brand", priority:"Média",
+    id:`pipe${Date.now()}`, name, stage, custId:"", sellerOrBrand:"Brand", priority:"Média",
     createdAt: `${new Date().getDate()}/${new Date().getMonth()+1}`,
     updatedAt: `${new Date().getDate()}/${new Date().getMonth()+1}`,
     segment:"", gmvMonth:0, gmvYear:0, tiktok:false, shoppee:false, meeting:false, meetingDate:"", notes:"",
@@ -154,6 +162,7 @@ export function TabTrabalho() {
 
   const TABLE_COLS = [
     { label:"Nome",        key:"name",          type:"string" },
+    { label:"Cust ID",     key:"custId",        type:"string" },
     { label:"Stage",       key:"stage",         type:"stage" },
     { label:"Tipo",        key:"sellerOrBrand",  type:"string" },
     { label:"Prioridade",  key:"priority",      type:"priority" },
@@ -361,6 +370,9 @@ export function TabTrabalho() {
                   <tr key={b.id} style={{ background: i%2===0 ? "var(--paper)" : "var(--cream)" }}>
                     <td style={{ padding:"5px 10px", border:"1px solid rgba(42,31,23,0.18)", fontWeight:600 }}>
                       <InlineEdit value={b.name} onChange={v => updateBrand(b.id, { name:v })} />
+                    </td>
+                    <td style={{ padding:"5px 10px", border:"1px solid rgba(42,31,23,0.18)", fontFamily:"var(--font-mono)", fontSize:11 }}>
+                      <InlineEdit value={b.custId || ""} onChange={v => updateBrand(b.id, { custId:v })} placeholder="—" />
                     </td>
                     <td style={{ padding:"5px 10px", border:"1px solid rgba(42,31,23,0.18)" }}>
                       <select value={b.stage} onChange={e => updateBrand(b.id, { stage: e.target.value })}
