@@ -28,6 +28,48 @@ const TWEAK_DEFAULTS = {
 export default function App() {
   const [activeTab, setActiveTab] = useLocalState("isa.activeTab", "inicio");
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [lastImport, setLastImport] = useLocalState("isa.lastImport", null);
+
+  const exportData = () => {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("isa.")) {
+        try { data[key] = JSON.parse(localStorage.getItem(key)); }
+        catch { data[key] = localStorage.getItem(key); }
+      }
+    }
+    const d = new Date();
+    const stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `painel-isa-${stamp}.json`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importData = () => {
+    const input = document.createElement("input");
+    input.type = "file"; input.accept = ".json";
+    input.onchange = (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          Object.entries(data).forEach(([key, value]) => {
+            if (key.startsWith("isa.")) localStorage.setItem(key, JSON.stringify(value));
+          });
+          const now = new Date();
+          const stamp = `${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+          localStorage.setItem("isa.lastImport", JSON.stringify(stamp));
+          window.location.reload();
+        } catch { alert("Arquivo inválido — use um .json exportado pelo painel."); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
 
   useEffect(() => {
     const root = document.documentElement;
@@ -67,6 +109,14 @@ export default function App() {
         <div className="header-meta">
           <span className="weather">☀️ 24° SP</span>
           <span>{dataCurta}</span>
+          {lastImport && (
+            <span style={{ fontSize:10, color:"var(--ink-mute)", whiteSpace:"nowrap" }}
+              title="último upload importado">↑ {lastImport}</span>
+          )}
+          <button className="btn ghost sm" style={{ fontSize:10, padding:"3px 10px" }} onClick={exportData}
+            title="Baixar todos os dados como JSON">↓ exportar</button>
+          <button className="btn ghost sm" style={{ fontSize:10, padding:"3px 10px" }} onClick={importData}
+            title="Carregar dados de outro dispositivo">↑ importar</button>
           <div className="avatar">I</div>
         </div>
       </header>
