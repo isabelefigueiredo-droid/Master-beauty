@@ -387,10 +387,15 @@ export function TabTrabalho() {
                       </select>
                     </td>
                     <td style={{ padding:"5px 10px", border:"1px solid rgba(42,31,23,0.18)" }}>
-                      <span className={`chip ${PRIORITY_CHIP[b.priority]||""}`} style={{ fontSize:10 }}>{b.priority}</span>
+                      <select value={b.priority} onChange={e => updateBrand(b.id, { priority: e.target.value })}
+                        style={{ fontSize:11, border:"none", background:"transparent", cursor:"pointer", fontFamily:"inherit" }}>
+                        <option>Alta</option><option>Média</option><option>Baixa</option>
+                      </select>
                     </td>
                     <td style={{ padding:"5px 10px", border:"1px solid rgba(42,31,23,0.18)" }}>
-                      <InlineEdit value={b.segment} onChange={v => updateBrand(b.id, { segment:v })} placeholder="—" />
+                      <span style={{ display:"inline-flex", alignItems:"center", padding:"2px 8px", borderRadius:20, fontSize:10, fontWeight:500, background:"var(--cream-deep)", border:"1px solid var(--ink)" }}>
+                        <InlineEdit value={b.segment || "—"} onChange={v => updateBrand(b.id, { segment: v === "—" ? "" : v })} placeholder="segmento" />
+                      </span>
                     </td>
                     <td style={{ padding:"5px 10px", border:"1px solid rgba(42,31,23,0.18)", fontFamily:"var(--font-mono)", textAlign:"right" }}>
                       {formatBRL(b.gmvMonth)}
