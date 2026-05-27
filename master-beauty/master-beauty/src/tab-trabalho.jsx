@@ -29,7 +29,37 @@ const defaultPipeline = [
   { id:"pipe5", name:"Cosméticos V", stage:"Onboarded", custId:"", sellerOrBrand:"Seller", priority:"Baixa", createdAt:"01/03", updatedAt:"15/05", segment:"Skincare", gmvMonth:20000, gmvYear:240000, tiktok:false, shoppee:true, meeting:false, meetingDate:"", notes:"Onboarding concluído ✓" },
 ];
 
-function BrandCard({ brand, onUpdate, onDelete, onDragStart }) {
+function SegmentSelect({ value, options, onChange, onAdd, style = {} }) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+  const commit = () => {
+    const v = draft.trim();
+    if (v) { onAdd(v); onChange(v); }
+    setDraft(""); setAdding(false);
+  };
+  if (adding) return (
+    <div className="row" style={{ gap:4 }}>
+      <input autoFocus className="input" value={draft} onChange={e => setDraft(e.target.value)}
+        placeholder="novo segmento" style={{ fontSize:11, flex:1 }}
+        onKeyDown={e => { if (e.key==="Enter") commit(); if (e.key==="Escape") { setDraft(""); setAdding(false); } }}
+        onBlur={commit} />
+    </div>
+  );
+  return (
+    <select value={value || ""} onChange={e => e.target.value === "__add__" ? setAdding(true) : onChange(e.target.value)}
+      style={{ fontSize:11, fontWeight:600, padding:"3px 10px", paddingRight:22, borderRadius:20,
+        border:"1.5px solid var(--ink)", background: value ? "var(--cream-deep)" : "var(--paper)",
+        cursor:"pointer", appearance:"none", width:"100%",
+        backgroundImage:"url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path fill='rgba(0,0,0,.45)' d='M0 0h10L5 6z'/></svg>\")",
+        backgroundRepeat:"no-repeat", backgroundPosition:"right 7px center", ...style }}>
+      <option value="">— segmento —</option>
+      {options.map(s => <option key={s} value={s}>{s}</option>)}
+      <option value="__add__">＋ novo segmento</option>
+    </select>
+  );
+}
+
+function BrandCard({ brand, onUpdate, onDelete, onDragStart, segmentOptions, onAddSegment }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <div
@@ -81,8 +111,9 @@ function BrandCard({ brand, onUpdate, onDelete, onDragStart }) {
               </select>
             </div>
             <div>
-              <div className="hand" style={{ fontSize:13 }}>Segmento</div>
-              <InlineEdit value={brand.segment} onChange={v => onUpdate({ segment: v })} placeholder="ex: Skincare" />
+              <div className="hand" style={{ fontSize:13, marginBottom:4 }}>Segmento</div>
+              <SegmentSelect value={brand.segment} options={segmentOptions}
+                onChange={v => onUpdate({ segment: v })} onAdd={onAddSegment} />
             </div>
             <div>
               <div className="hand" style={{ fontSize:13 }}>Cust ID</div>
@@ -91,19 +122,23 @@ function BrandCard({ brand, onUpdate, onDelete, onDragStart }) {
                 style={{ width:"100%", border:"1.5px dashed var(--ink)", background:"var(--paper)", borderRadius:4, padding:"2px 6px", fontFamily:"var(--font-mono)", fontSize:12 }} />
             </div>
             <div>
+              <div className="hand" style={{ fontSize:13 }}>Criado em</div>
+              <InlineEdit value={brand.createdAt} onChange={v => onUpdate({ createdAt: v })} placeholder="dd/mm" />
+            </div>
+          </div>
+          {/* GMV — linha própria para alinhar perfeitamente */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, fontSize:12, marginTop:8 }}>
+            <div>
               <div className="hand" style={{ fontSize:13 }}>GMV mês (R$)</div>
               <input type="number" value={brand.gmvMonth}
                 onChange={e => { const m = +e.target.value; onUpdate({ gmvMonth: m, gmvYear: m * 12 }); }}
                 style={{ width:"100%", border:"1.5px dashed var(--ink)", background:"var(--paper)", borderRadius:4, padding:"2px 6px", fontFamily:"var(--font-mono)", fontSize:12 }} />
             </div>
             <div>
-              <div className="hand" style={{ fontSize:13 }}>GMV ano (R$) <span style={{ fontWeight:400, opacity:.6 }}>auto · editável</span></div>
+              <div className="hand" style={{ fontSize:13 }}>GMV ano (R$)</div>
               <input type="number" value={brand.gmvYear} onChange={e => onUpdate({ gmvYear: +e.target.value })}
                 style={{ width:"100%", border:"1.5px dashed var(--ink)", background:"var(--paper)", borderRadius:4, padding:"2px 6px", fontFamily:"var(--font-mono)", fontSize:12 }} />
-            </div>
-            <div>
-              <div className="hand" style={{ fontSize:13 }}>Criado em</div>
-              <InlineEdit value={brand.createdAt} onChange={v => onUpdate({ createdAt: v })} placeholder="dd/mm" />
+              <div style={{ fontSize:10, color:"var(--ink-mute)", marginTop:2 }}>↺ auto (×12) · editável</div>
             </div>
           </div>
           <div style={{ marginTop:8, fontSize:12 }}>
@@ -148,6 +183,14 @@ export function TabTrabalho() {
   const updateBrand = (id, patch) => setPipeline(pipeline.map(b => b.id === id ? { ...b, ...patch, updatedAt: new Date().toLocaleDateString("pt-BR","dd/MM").split("/").slice(0,2).join("/") } : b));
   const removeBrand = (id) => setPipeline(pipeline.filter(b => b.id !== id));
   const moveBrand = (id, stage) => updateBrand(id, { stage });
+
+  // Segmentos customizáveis
+  const [segmentOptions, setSegmentOptions] = useLocalState("isa.trabalho.segments",
+    ["Skincare", "Perfumaria", "Maquiagem", "Haircare", "Unhas", "Corpo & Bem-estar", "Masculino", "Outros"]
+  );
+  const addSegmentOption = (v) => {
+    if (!segmentOptions.includes(v)) setSegmentOptions([...segmentOptions, v]);
+  };
   const addBrand = (name, stage) => setPipeline([...pipeline, {
     id:`pipe${Date.now()}`, name, stage, custId:"", sellerOrBrand:"Brand", priority:"Média",
     createdAt: `${new Date().getDate()}/${new Date().getMonth()+1}`,
@@ -342,7 +385,9 @@ export function TabTrabalho() {
                     <BrandCard key={b.id} brand={b}
                       onUpdate={patch => updateBrand(b.id, patch)}
                       onDelete={() => removeBrand(b.id)}
-                      onDragStart={e => { e.dataTransfer.setData("brandId", b.id); e.dataTransfer.effectAllowed = "move"; }} />
+                      onDragStart={e => { e.dataTransfer.setData("brandId", b.id); e.dataTransfer.effectAllowed = "move"; }}
+                      segmentOptions={segmentOptions}
+                      onAddSegment={addSegmentOption} />
                   ))}
                   <button className="btn ghost sm" style={{ width:"100%", fontSize:11, marginTop:4 }}
                     onClick={() => addBrand("nova marca", stage)}>+ marca</button>
@@ -393,9 +438,10 @@ export function TabTrabalho() {
                       </select>
                     </td>
                     <td style={{ padding:"5px 10px", border:"1px solid rgba(42,31,23,0.18)" }}>
-                      <span style={{ display:"inline-flex", alignItems:"center", padding:"2px 8px", borderRadius:20, fontSize:10, fontWeight:500, background:"var(--cream-deep)", border:"1px solid var(--ink)" }}>
-                        <InlineEdit value={b.segment || "—"} onChange={v => updateBrand(b.id, { segment: v === "—" ? "" : v })} placeholder="segmento" />
-                      </span>
+                      <SegmentSelect value={b.segment} options={segmentOptions}
+                        onChange={v => updateBrand(b.id, { segment: v })}
+                        onAdd={addSegmentOption}
+                        style={{ fontSize:10, padding:"2px 8px" }} />
                     </td>
                     <td style={{ padding:"5px 10px", border:"1px solid rgba(42,31,23,0.18)", fontFamily:"var(--font-mono)", textAlign:"right" }}>
                       {formatBRL(b.gmvMonth)}
