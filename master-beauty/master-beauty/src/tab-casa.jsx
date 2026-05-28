@@ -1,8 +1,29 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   useLocalState, Card, CardHeader, Sticker, Chip,
   InlineEdit, AddRow, DeleteBtn,
 } from './shared.jsx';
+
+const uploadPhoto = (callback) => {
+  const input = document.createElement("input");
+  input.type = "file"; input.accept = "image/*";
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => callback(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+  input.click();
+};
+
+const fetchOgImage = async (url, onSuccess) => {
+  try {
+    const res = await fetch(`https://api.microlink.io?url=${encodeURIComponent(url)}`);
+    const data = await res.json();
+    const img = data?.data?.image?.url || data?.data?.screenshot?.url;
+    if (img) onSuccess(img);
+  } catch {}
+};
 
 export function TabCasa() {
   const [shopping, setShopping] = useLocalState("isa.casa.shopping", [
@@ -47,17 +68,19 @@ export function TabCasa() {
   const updateMenu = (d, field, v) => setMenu(menu.map(m => m.d === d ? { ...m, [field]: v } : m));
 
   const [recipes, setRecipes] = useLocalState("isa.casa.recipes", [
-    { id:"r1", name: "Nhoque de batata-doce", dur: "45min", tag: "italiana", c: "var(--mustard)" },
-    { id:"r2", name: "Curry tailandês de grão-de-bico", dur: "30min", tag: "vegetariana", c: "var(--olive)" },
-    { id:"r3", name: "Risoto de limão siciliano", dur: "40min", tag: "italiana", c: "var(--rose)" },
-    { id:"r4", name: "Salmão com crosta de gergelim", dur: "25min", tag: "asiática", c: "var(--blue)" },
+    { id:"r1", name: "Nhoque de batata-doce", dur: "45min", tag: "italiana", c: "var(--mustard)", link:"", body:"" },
+    { id:"r2", name: "Curry tailandês de grão-de-bico", dur: "30min", tag: "vegetariana", c: "var(--olive)", link:"", body:"" },
+    { id:"r3", name: "Risoto de limão siciliano", dur: "40min", tag: "italiana", c: "var(--rose)", link:"", body:"" },
+    { id:"r4", name: "Salmão com crosta de gergelim", dur: "25min", tag: "asiática", c: "var(--blue)", link:"", body:"" },
   ]);
   const updateRecipe = (id, patch) => setRecipes(recipes.map(r => r.id === id ? { ...r, ...patch } : r));
   const removeRecipe = (id) => setRecipes(recipes.filter(r => r.id !== id));
   const addRecipe = (name) => {
     const colors = ["var(--mustard)","var(--olive)","var(--rose)","var(--blue)","var(--terracotta)","var(--plum)"];
-    setRecipes([...recipes, { id:`r${Date.now()}`, name, dur:"30min", tag:"nova", c: colors[recipes.length % colors.length] }]);
+    setRecipes([...recipes, { id:`r${Date.now()}`, name, dur:"30min", tag:"nova", c: colors[recipes.length % colors.length], link:"", body:"" }]);
   };
+  const [expandedRecipes, setExpandedRecipes] = useState({});
+  const toggleRecipe = (id) => setExpandedRecipes(p => ({ ...p, [id]: !p[id] }));
 
   const [pets, setPets] = useLocalState("isa.casa.pets", [
     { id:"p1", name: "Luna", kind: "🐱", age: "2 anos", color: "var(--terracotta)", next: "Vacina V4 · sáb" },
@@ -72,10 +95,10 @@ export function TabCasa() {
   };
 
   const [wishlist, setWishlist] = useLocalState("isa.casa.wishlist", [
-    { id:"w1", item:"Poltrona de leitura cor terracota", price:"R$ 1.890", priority:"alta", c:"terracotta" },
-    { id:"w2", item:"Tapete kilim sala", price:"R$ 740", priority:"média", c:"olive" },
-    { id:"w3", item:"Luminária de chão de palha", price:"R$ 420", priority:"baixa", c:"mustard" },
-    { id:"w4", item:"Espelho redondo grande", price:"R$ 320", priority:"média", c:"rose" },
+    { id:"w1", item:"Poltrona de leitura cor terracota", price:"R$ 1.890", priority:"alta", c:"terracotta", link:"", imgUrl:"" },
+    { id:"w2", item:"Tapete kilim sala", price:"R$ 740", priority:"média", c:"olive", link:"", imgUrl:"" },
+    { id:"w3", item:"Luminária de chão de palha", price:"R$ 420", priority:"baixa", c:"mustard", link:"", imgUrl:"" },
+    { id:"w4", item:"Espelho redondo grande", price:"R$ 320", priority:"média", c:"rose", link:"", imgUrl:"" },
   ]);
   const updateWish = (id, patch) => setWishlist(wishlist.map(w => w.id === id ? { ...w, ...patch } : w));
   const removeWish = (id) => setWishlist(wishlist.filter(w => w.id !== id));
@@ -187,8 +210,27 @@ export function TabCasa() {
                     <InlineEdit value={r.tag} onChange={(v) => updateRecipe(r.id, { tag: v })} />
                   </span>
                   <div className="flex1"></div>
+                  <button className="btn ghost sm" style={{ fontSize:9, padding:"1px 6px" }}
+                    onClick={() => toggleRecipe(r.id)}>
+                    {expandedRecipes[r.id] ? "▲" : "▼ receita"}
+                  </button>
                   <DeleteBtn onClick={() => removeRecipe(r.id)} />
                 </div>
+                {/* Link da receita */}
+                <div className="row" style={{ gap:4, marginTop:6 }}>
+                  <input value={r.link || ""} onChange={e => updateRecipe(r.id, { link: e.target.value })}
+                    placeholder="↗ cole um link..."
+                    style={{ flex:1, fontSize:10, border:"1px dashed var(--ink)", borderRadius:6, padding:"3px 7px", background:"var(--paper)", minWidth:0 }} />
+                  {r.link && (
+                    <a href={r.link} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize:12, color:"var(--blue)", textDecoration:"none", flexShrink:0 }}>↗</a>
+                  )}
+                </div>
+                {expandedRecipes[r.id] && (
+                  <textarea value={r.body || ""} onChange={e => updateRecipe(r.id, { body: e.target.value })}
+                    placeholder="ingredientes e modo de preparo..."
+                    style={{ width:"100%", marginTop:6, minHeight:90, border:"1.5px dashed var(--ink)", background:"var(--paper)", borderRadius:8, padding:"6px 8px", fontSize:11, fontFamily:"var(--font-body)", lineHeight:1.5, resize:"vertical" }} />
+                )}
               </div>
             ))}
           </div>
@@ -204,7 +246,14 @@ export function TabCasa() {
                 <div style={{ position:"absolute", top:-4, right:-4 }}>
                   <DeleteBtn onClick={() => removePet(p.id)} />
                 </div>
-                <div className="pet-avatar" style={{ background: p.color, color: "var(--paper)" }}>{p.kind}</div>
+                <div className="pet-avatar"
+                  title="clique para trocar foto"
+                  onClick={() => uploadPhoto(photo => updatePet(p.id, { photo }))}
+                  style={{ background: p.photo ? "transparent" : p.color, color:"var(--paper)", cursor:"pointer", overflow:"hidden", padding:0, display:"grid", placeItems:"center" }}>
+                  {p.photo
+                    ? <img src={p.photo} alt={p.name} style={{ width:"100%", height:"100%", objectFit:"cover", borderRadius:"50%", display:"block" }} />
+                    : p.kind}
+                </div>
                 <div className="bold" style={{ fontSize: 14 }}>
                   <InlineEdit value={p.name} onChange={(v) => updatePet(p.id, { name: v })} />
                 </div>
@@ -236,11 +285,30 @@ export function TabCasa() {
               <div style={{ position:"absolute", top:6, right:6 }}>
                 <DeleteBtn onClick={() => removeWish(w.id)} />
               </div>
-              <div className="imgph" style={{ minHeight: 80, marginBottom: 10, background: `linear-gradient(135deg, ${w.c === "terracotta" ? "var(--terracotta)" : w.c === "olive" ? "var(--olive)" : w.c === "mustard" ? "var(--mustard)" : w.c === "blue" ? "var(--blue)" : "var(--rose)"} 0%, transparent 100%), repeating-linear-gradient(135deg, rgba(42,31,23,0.08) 0 6px, transparent 6px 12px), var(--cream)` }}>
-                <span style={{ fontFamily: "var(--font-hand)", fontSize: 18, color: "var(--paper)", textShadow: "1px 1px 0 var(--ink)" }}>{(w.item || "?").split(" ")[0]}</span>
-              </div>
+              {/* Imagem do produto */}
+              {w.imgUrl
+                ? <img src={w.imgUrl} alt={w.item}
+                    style={{ width:"100%", height:90, objectFit:"cover", borderRadius:8, marginBottom:10, border:"1.5px solid var(--ink)", display:"block" }} />
+                : <div className="imgph" style={{ minHeight:80, marginBottom:10, background:`linear-gradient(135deg,${w.c==="terracotta"?"var(--terracotta)":w.c==="olive"?"var(--olive)":w.c==="mustard"?"var(--mustard)":w.c==="blue"?"var(--blue)":"var(--rose)"} 0%,transparent 100%),repeating-linear-gradient(135deg,rgba(42,31,23,.08) 0 6px,transparent 6px 12px),var(--cream)` }}>
+                    <span style={{ fontFamily:"var(--font-hand)", fontSize:18, color:"var(--paper)", textShadow:"1px 1px 0 var(--ink)" }}>{(w.item||"?").split(" ")[0]}</span>
+                  </div>
+              }
               <div className="bold" style={{ fontSize: 13, lineHeight: 1.3 }}>
                 <InlineEdit value={w.item} onChange={(v) => updateWish(w.id, { item: v })} />
+              </div>
+              {/* Link do produto */}
+              <div className="row" style={{ gap:4, marginTop:6, marginBottom:4 }}>
+                <input value={w.link || ""} placeholder="cole o link do produto..."
+                  style={{ flex:1, fontSize:10, border:"1px dashed var(--ink)", borderRadius:6, padding:"3px 7px", background:"var(--paper)", minWidth:0 }}
+                  onChange={e => updateWish(w.id, { link: e.target.value, imgUrl: "" })}
+                  onBlur={e => {
+                    const url = e.target.value.trim();
+                    if (url) fetchOgImage(url, img => updateWish(w.id, { imgUrl: img }));
+                  }} />
+                {w.link && (
+                  <a href={w.link} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize:12, color:"var(--blue)", textDecoration:"none", flexShrink:0 }}>↗</a>
+                )}
               </div>
               <div className="row between mt-2">
                 <span className="bignum" style={{ fontSize: 18 }}>
