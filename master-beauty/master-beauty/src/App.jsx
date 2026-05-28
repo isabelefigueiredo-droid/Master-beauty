@@ -43,6 +43,7 @@ export default function App() {
   const [palette, setPalette] = useState(false);
   const [toast, setToast]   = useState(null);
   const [googleConnected, setGoogleConnected] = useState(() => !!getStoredToken());
+  const [aiContext, setAiContext] = useState(null);
 
   useEffect(() => {
     document.body.dataset.theme   = dark ? "dark" : "light";
@@ -154,7 +155,8 @@ export default function App() {
                 onCreate={(k) => runCmd("create", k)}
                 googleConnected={googleConnected}
                 onGoogleSignIn={configured ? handleGoogleSignIn : null}
-                onGoogleSignOut={configured ? handleGoogleSignOut : null} />
+                onGoogleSignOut={configured ? handleGoogleSignOut : null}
+                onContextUpdate={setAiContext} />
             )}
             {nav === "pipeline" && <TabPipeline />}
             {(nav === "inbox" || nav === "agenda" || nav === "tarefas" || nav === "notas") && (
@@ -164,7 +166,7 @@ export default function App() {
         </div>
       </div>
 
-      <AIDrawer open={drawer} seed={seed} onClose={() => setDrawer(false)} onDebrief={setDebrief} />
+      <AIDrawer open={drawer} seed={seed} onClose={() => setDrawer(false)} onDebrief={setDebrief} context={aiContext} />
       <DebriefModal meeting={debrief} onClose={() => setDebrief(null)} toast={fireToast} />
       <CommandPalette open={palette} onClose={() => setPalette(false)} onRun={runCmd} />
 

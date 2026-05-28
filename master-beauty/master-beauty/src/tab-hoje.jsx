@@ -3,6 +3,7 @@ import Icons from './icons.jsx';
 import { MHB } from './data.js';
 import { useLocalState } from './shared.jsx';
 import { fetchTodayEvents, fetchUnreadEmails, fetchRecentDriveFiles } from './google-api.js';
+import { streamClaude } from './claude-api.js';
 
 const I = Icons;
 
@@ -17,19 +18,6 @@ function useGoogleData(fetchFn, fallback, connected) {
   return data;
 }
 
-/* ── Mock AI responses ──────────────────────────────────── */
-function aiAnswer(q) {
-  const s = q.toLowerCase();
-  if (s.includes("inbox") || s.includes("resumir") || s.includes("e-mail") || s.includes("email"))
-    return "4 e-mails pedem resposta hoje. Por urgência:\n\n— Glowé (Renata): aceitou os 14%, falta fechar o prazo de repasse. É o que destrava o maior negócio da semana.\n— Carlos (liderança): quer o consolidado do trimestre até sexta.\n— Dermavita: já enviou a documentação — basta seguir com o onboarding.\n— Bloom (Marina): pediu para remarcar a call para quinta.\n\nQuer que eu rascunhe a resposta da Glowé primeiro?";
-  if (s.includes("priorida"))
-    return "Suas 3 prioridades agora:\n\n1. Fechar a proposta da Glowé (14% + repasse 30d) — trava o maior negócio do mês.\n2. Preparar a reunião das 11h com a Glowé — começa em 18 min.\n3. Consolidar os fechamentos do trimestre para o Carlos antes de sexta.\n\nO resto pode esperar a tarde.";
-  if (s.includes("glow") || s.includes("rascunh") || s.includes("resposta"))
-    return "Rascunho de resposta — Glowé:\n\n\"Oi Renata, ótima notícia. Fechamos nos 14%. Sobre o repasse, conseguimos trabalhar com 30 dias corridos após a venda. Te envio a minuta ainda hoje para assinatura. Seguimos com a exclusividade do lançamento de skincare, combinado?\"\n\nQuer que eu ajuste o tom ou já deixo pronto para enviar?";
-  if (s.includes("dermavita") || s.includes("onboarding"))
-    return "Dermavita já enviou contrato social e dados bancários. Pendências para o onboarding:\n\n— Confirmar frete Full.\n— Validar documentação com o Jurídico (contrato no Drive).\n— Agendar go-live.\n\nPosso abrir as 3 tarefas e marcar a call de onboarding das 16h30?";
-  return "Posso te ajudar com a inbox, a agenda, as tarefas e os arquivos do Drive. Tente, por exemplo: \"prepara a reunião das 11h\", \"quais minhas prioridades?\" ou \"o que ficou pendente com a Dermavita?\".";
-}
 
 /* ── Próxima reunião + timeline do dia ──────────────────── */
 export function MeetingHero({ now, onDebrief, onJoin, agenda }) {
@@ -297,34 +285,39 @@ export function NotesCard() {
 }
 
 /* ── AI Drawer ──────────────────────────────────────────── */
-export function AIDrawer({ open, seed, onClose, onDebrief }) {
+export function AIDrawer({ open, seed, onClose, onDebrief, context }) {
   const [msgs, setMsgs] = useState([]);
   const [typing, setTyping] = useState("");
   const [input, setInput] = useState("");
   const bodyRef = useRef(null);
   const seededRef = useRef(null);
+  const abortRef = useRef(null);
 
   const scrollDown = () => { const el = bodyRef.current; if (el) el.scrollTop = el.scrollHeight; };
 
   const ask = useCallback((q) => {
     if (!q.trim()) return;
-    setMsgs((m) => [...m, { role: "user", text: q }]);
-    const full = aiAnswer(q);
-    let i = 0;
+    const history = [];
+    setMsgs((m) => { history.push(...m); return [...m, { role: "user", text: q }]; });
     setTyping("");
-    const tick = () => {
-      i += Math.max(2, Math.round(full.length / 90));
-      setTyping(full.slice(0, i));
-      scrollDown();
-      if (i < full.length) setTimeout(tick, 16);
-      else { setMsgs((m) => [...m, { role: "ai", text: full }]); setTyping(""); }
-    };
-    setTimeout(tick, 280);
-  }, []);
+
+    const claudeMessages = [
+      ...history.map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.text })),
+      { role: "user", content: q },
+    ];
+
+    streamClaude({
+      messages: claudeMessages,
+      context: context || {},
+      onChunk: (text) => { setTyping(text); scrollDown(); },
+      onDone: (text) => { setMsgs((m) => [...m, { role: "ai", text: text || "…" }]); setTyping(""); },
+      onError: () => { setMsgs((m) => [...m, { role: "ai", text: "Tive um problema ao processar. Tente novamente." }]); setTyping(""); },
+    });
+  }, [context]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (open && seed && seededRef.current !== seed) { seededRef.current = seed; ask(seed); }
-    if (!open) seededRef.current = null;
+    if (!open) { seededRef.current = null; setTyping(""); }
   }, [open, seed, ask]);
   useEffect(() => { scrollDown(); }, [msgs, typing]);
 
@@ -540,7 +533,7 @@ export function CommandPalette({ open, onClose, onRun }) {
 }
 
 /* ── Tab Hoje (hub) ─────────────────────────────────────── */
-export default function TabHoje({ onAsk, onDebrief, onJoin, onCreate, googleConnected, onGoogleSignIn, onGoogleSignOut }) {
+export default function TabHoje({ onAsk, onDebrief, onJoin, onCreate, googleConnected, onGoogleSignIn, onGoogleSignOut, onContextUpdate }) {
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const dateStr = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
@@ -550,6 +543,10 @@ export default function TabHoje({ onAsk, onDebrief, onJoin, onCreate, googleConn
   const agenda = useGoogleData(fetchTodayEvents,      MHB.agenda, googleConnected);
   const emails = useGoogleData(fetchUnreadEmails,     MHB.emails, googleConnected);
   const drive  = useGoogleData(fetchRecentDriveFiles, MHB.drive,  googleConnected);
+
+  useEffect(() => {
+    onContextUpdate?.({ agenda, emails, tasks: MHB.tasks });
+  }, [agenda, emails]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const inboxEmails = emails.filter((e) => e.needsReply);
   const nReply  = inboxEmails.length;
