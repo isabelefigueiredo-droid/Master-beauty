@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import Cortisol from "./Cortisol";
 
 const db = {
   get: (k, d = null) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
@@ -676,10 +677,11 @@ function Historico() {
 
 /* ─── App ─── */
 const PAGES = [
-  { id: "home", label: "Início", icon: "🏠" },
-  { id: "treino", label: "Treino", icon: "💪" },
-  { id: "dieta", label: "Dieta", icon: "🥗" },
-  { id: "historico", label: "Histórico", icon: "📋" },
+  { id: "home",      label: "Início",   icon: "🏠" },
+  { id: "treino",    label: "Treino",   icon: "💪" },
+  { id: "dieta",     label: "Dieta",    icon: "🥗" },
+  { id: "cortisol",  label: "Cortisol", icon: "🌿" },
+  { id: "historico", label: "Hist.",    icon: "📋" },
 ];
 
 export default function App() {
@@ -690,6 +692,7 @@ export default function App() {
         {page === "home"       && <Home setPage={setPage} />}
         {page === "treino"     && <Treino />}
         {page === "dieta"      && <Dieta />}
+        {page === "cortisol"   && <Cortisol />}
         {page === "historico"  && <Historico />}
       </div>
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-[#fde8f0] z-40 shadow-[0_-4px_20px_rgba(214,51,132,0.08)]">
