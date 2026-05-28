@@ -117,10 +117,7 @@ export default function App() {
           <button className="kbtn" onClick={() => setPalette(true)}>
             <I.search size={16} /> Buscar ou executar comando <span className="kk">⌘K</span>
           </button>
-          <button className="iconbtn" onClick={() => setDark((d) => !d)}>
-            {dark ? <I.sun size={18} /> : <I.moon size={18} />}
-          </button>
-          <div className="avatar">IS</div>
+          <div className="avatar" title="Isabele · Hunter Beauty">IS</div>
         </div>
 
         <div className="scroll">

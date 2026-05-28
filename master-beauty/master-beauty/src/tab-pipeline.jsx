@@ -19,6 +19,32 @@ function fmtBRL(n) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 }
 
+function GMVInput({ value, onChange }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+  if (editing) return (
+    <input autoFocus type="number" value={draft} onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => { onChange(+draft || 0); setEditing(false); }}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") { onChange(+draft || 0); setEditing(false); } }}
+      style={{ border: "1px solid var(--accent)", background: "var(--bg)", fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--text)", width: 90, borderRadius: 6, padding: "2px 6px", outline: "none", textAlign: "right" }} />
+  );
+  return (
+    <span onClick={() => { setDraft(String(value)); setEditing(true); }} title="Clique para editar"
+      style={{ cursor: "text", fontSize: 13, borderBottom: "1px dashed var(--bd-2)", paddingBottom: 1 }}>
+      {fmtBRL(value)}
+    </span>
+  );
+}
+
+function ToggleCheck({ checked, onChange }) {
+  return (
+    <button onClick={() => onChange(!checked)}
+      style={{ width: 26, height: 26, borderRadius: 6, border: `2px solid ${checked ? "var(--ok)" : "var(--bd-2)"}`, background: checked ? "var(--ok)" : "transparent", color: "#fff", display: "grid", placeItems: "center", transition: "all .12s" }}>
+      {checked && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="square"><path d="M4 12l6 6 10-10"/></svg>}
+    </button>
+  );
+}
+
 function SegmentSelect({ value, options, onChange, onAdd }) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState("");
@@ -214,16 +240,18 @@ function PipeTable({ brands, onUpdate, onDelete, segmentOptions, onAddSegment })
                   <option value="Seller">Seller</option>
                 </select>
               </td>
-              <td className="mono" style={{ whiteSpace: "nowrap" }}>
-                <input type="number" value={b.gmvMonth} onChange={(e) => onUpdate(b.id, { gmvMonth: +e.target.value })}
-                  style={{ border: "none", background: "transparent", fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--text)", width: 90, outline: "none" }} />
+              <td className="mono" style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                <GMVInput value={b.gmvMonth} onChange={(v) => onUpdate(b.id, { gmvMonth: v })} />
               </td>
-              <td className="mono" style={{ whiteSpace: "nowrap" }}>
-                <input type="number" value={b.gmvYear} onChange={(e) => onUpdate(b.id, { gmvYear: +e.target.value })}
-                  style={{ border: "none", background: "transparent", fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--text)", width: 110, outline: "none" }} />
+              <td className="mono" style={{ whiteSpace: "nowrap", textAlign: "right" }}>
+                <GMVInput value={b.gmvYear} onChange={(v) => onUpdate(b.id, { gmvYear: v })} />
               </td>
-              <td style={{ textAlign: "center" }}><input type="checkbox" checked={b.tiktok} onChange={(e) => onUpdate(b.id, { tiktok: e.target.checked })} /></td>
-              <td style={{ textAlign: "center" }}><input type="checkbox" checked={b.shoppee} onChange={(e) => onUpdate(b.id, { shoppee: e.target.checked })} /></td>
+              <td style={{ textAlign: "center" }}>
+                <ToggleCheck checked={b.tiktok} onChange={(v) => onUpdate(b.id, { tiktok: v })} />
+              </td>
+              <td style={{ textAlign: "center" }}>
+                <ToggleCheck checked={b.shoppee} onChange={(v) => onUpdate(b.id, { shoppee: v })} />
+              </td>
               <td style={{ maxWidth: 200 }}>
                 <input value={b.notes || ""} onChange={(e) => onUpdate(b.id, { notes: e.target.value })}
                   placeholder="notas…"
@@ -248,7 +276,11 @@ export default function TabPipeline() {
   const [dragId, setDragId] = useState(null);
 
   const update = (id, patch) => setBrands((bs) => bs.map((b) => b.id === id ? { ...b, ...patch } : b));
-  const remove = (id) => setBrands((bs) => bs.filter((b) => b.id !== id));
+  const remove = (id) => {
+    const brand = brands.find((b) => b.id === id);
+    if (!window.confirm(`Remover "${brand?.name}" do pipeline? Esta ação não pode ser desfeita.`)) return;
+    setBrands((bs) => bs.filter((b) => b.id !== id));
+  };
   const addBrand = () => {
     const nb = { id: "p" + Date.now(), name: "Nova marca", stage: "Not initiated", segment: "", sellerOrBrand: "Brand", gmvMonth: 0, gmvYear: 0, tiktok: false, shoppee: false, notes: "" };
     setBrands((bs) => [nb, ...bs]);
@@ -271,6 +303,7 @@ export default function TabPipeline() {
     setDragId(null);
   };
 
+  const [exportMsg, setExportMsg] = useState("");
   const exportCSV = () => {
     const h = ["Nome", "Estágio", "Segmento", "Tipo", "GMV Mês", "GMV Ano", "TikTok", "Shopee", "Notas"];
     const rows = brands.map((b) => [b.name, b.stage, b.segment, b.sellerOrBrand, b.gmvMonth, b.gmvYear, b.tiktok ? "Sim" : "Não", b.shoppee ? "Sim" : "Não", b.notes || ""].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
@@ -279,6 +312,8 @@ export default function TabPipeline() {
     a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
     a.download = "pipeline-hunting-beauty.csv";
     a.click();
+    setExportMsg("✓ CSV exportado");
+    setTimeout(() => setExportMsg(""), 2500);
   };
 
   const totalGMV = brands.reduce((s, b) => s + (b.gmvYear || 0), 0);
@@ -303,8 +338,8 @@ export default function TabPipeline() {
             <I.table size={15} /> Tabela
           </button>
           <button onClick={exportCSV}
-            style={{ display: "flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: "var(--surface)", color: "var(--text-3)", fontWeight: 600, fontSize: 13 }}>
-            <I.filePresent size={15} /> Exportar CSV
+            style={{ display: "flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: exportMsg ? "var(--ok)" : "var(--surface)", color: exportMsg ? "#fff" : "var(--text-3)", fontWeight: 600, fontSize: 13, transition: "all .2s" }}>
+            <I.filePresent size={15} /> {exportMsg || "Exportar CSV"}
           </button>
           <a href="https://meli.lightning.force.com/lightning/page/home" target="_blank" rel="noreferrer"
             style={{ display: "flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: "var(--surface)", color: "var(--text-3)", fontWeight: 600, fontSize: 13, textDecoration: "none" }}>

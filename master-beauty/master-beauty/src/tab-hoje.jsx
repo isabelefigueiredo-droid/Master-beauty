@@ -113,11 +113,12 @@ export function InboxCard({ onAsk }) {
     <div className="card">
       <div className="head">
         <div className="t"><span className="ico"><I.mail size={17} /></span>Precisam de resposta <span className="count">{emails.length}</span></div>
-        <button className="more" onClick={() => onAsk("Resumir minha inbox de hoje")}><I.sparkle size={14} /> Resumir</button>
+        <button className="more" onClick={() => onAsk("Resumir minha inbox de hoje")}><I.sparkle size={14} /> Resumir com IA</button>
       </div>
       <div className="body" style={{ paddingTop: 6 }}>
         {emails.map((m) => (
-          <div className="lrow" key={m.id}>
+          <div className="lrow" key={m.id} onClick={() => onAsk(`Rascunhar resposta para ${m.from}: "${m.subject}"`)}
+            title="Clique para rascunhar resposta com IA">
             <span style={{ width: 8, height: 8, borderRadius: 999, background: m.unread ? "var(--accent)" : "transparent", border: m.unread ? "none" : "2px solid var(--bd-2)", marginTop: 6, flex: "0 0 auto" }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -128,6 +129,7 @@ export function InboxCard({ onAsk }) {
               <div style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text-2)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.subject}</div>
               <div style={{ fontSize: 12.5, color: "var(--text-3)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.preview}</div>
             </div>
+            <span style={{ flex: "0 0 auto", color: "var(--text-4)", opacity: 0 }} className="reply-hint"><I.sparkle size={14} /></span>
           </div>
         ))}
       </div>
@@ -140,12 +142,19 @@ export function DriveCard() {
   const files = MHB.drive;
   const color = { sheet: "#1F8A5B", slides: "#F9A825", doc: "#1B5BD9" };
   const kind  = { sheet: "Planilha", slides: "Apresentação", doc: "Documento" };
+  const openDrive = () => window.open("https://drive.google.com", "_blank", "noopener");
   return (
     <div className="card">
-      <div className="head"><div className="t"><span className="ico"><I.drive size={17} /></span>Drive — recentes</div><button className="more">Abrir Drive <I.arrow size={13} /></button></div>
+      <div className="head">
+        <div className="t"><span className="ico"><I.drive size={17} /></span>Drive — recentes</div>
+        <button className="more" onClick={openDrive}>Abrir Drive <I.arrow size={13} /></button>
+      </div>
       <div className="body" style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 18 }}>
         {files.map((f) => (
-          <div key={f.id} style={{ flex: "0 0 168px", border: "1px solid var(--bd)", borderRadius: 12, padding: 14, background: "var(--bg)", cursor: "pointer" }}>
+          <div key={f.id} onClick={openDrive}
+            style={{ flex: "0 0 168px", border: "1px solid var(--bd)", borderRadius: 12, padding: 14, background: "var(--bg)", cursor: "pointer", transition: "box-shadow .12s, border-color .12s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "var(--shadow-pop)"; e.currentTarget.style.borderColor = "var(--bd-2)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.borderColor = "var(--bd)"; }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", background: color[f.type] + "22", color: color[f.type], marginBottom: 10 }}><I.filePresent size={17} /></div>
             <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.2, marginBottom: 6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{f.name}</div>
             <div style={{ fontSize: 11, color: "var(--text-4)" }}>{kind[f.type]} · {f.when}</div>
@@ -159,13 +168,33 @@ export function DriveCard() {
 /* ── Tarefas ────────────────────────────────────────────── */
 export function TasksCard() {
   const [tasks, setTasks] = useLocalState("mhb_tasks", MHB.tasks);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
   const toggle = (id) => setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
+  const addTask = () => {
+    if (!draft.trim()) { setAdding(false); return; }
+    setTasks((ts) => [...ts, { id: "t" + Date.now(), title: draft.trim(), due: "Hoje", priority: "média", done: false, ctx: "Hunting" }]);
+    setDraft(""); setAdding(false);
+  };
   const open = tasks.filter((t) => !t.done).length;
   const pc = { alta: "var(--crit)", "média": "var(--warn)", baixa: "var(--text-4)" };
   return (
     <div className="card">
-      <div className="head"><div className="t"><span className="ico"><I.check size={17} /></span>Tarefas de hoje <span className="count">{open}</span></div><button className="more"><I.plus size={14} /></button></div>
+      <div className="head">
+        <div className="t"><span className="ico"><I.check size={17} /></span>Tarefas de hoje <span className="count">{open}</span></div>
+        <button className="more" onClick={() => { setAdding((a) => !a); setTimeout(() => document.getElementById("task-draft")?.focus(), 30); }} title="Adicionar tarefa"><I.plus size={14} /></button>
+      </div>
       <div className="body" style={{ paddingTop: 6 }}>
+        {adding && (
+          <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 6px", marginBottom: 4 }}>
+            <span style={{ width: 19, height: 19, borderRadius: 6, flex: "0 0 auto", border: "2px dashed var(--bd-2)" }} />
+            <input id="task-draft" autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
+              placeholder="Nova tarefa…"
+              onKeyDown={(e) => { if (e.key === "Enter") addTask(); if (e.key === "Escape") { setAdding(false); setDraft(""); } }}
+              onBlur={addTask}
+              style={{ flex: 1, border: "none", background: "transparent", color: "var(--text)", fontFamily: "inherit", fontSize: 13.5, outline: "none" }} />
+          </div>
+        )}
         {tasks.map((t) => (
           <div className="lrow" key={t.id} onClick={() => toggle(t.id)} style={{ alignItems: "center" }}>
             <span style={{ width: 19, height: 19, borderRadius: 6, flex: "0 0 auto", display: "grid", placeItems: "center", background: t.done ? "var(--text)" : "transparent", border: t.done ? "none" : "2px solid var(--bd-2)", color: "var(--bg)" }}>
@@ -190,7 +219,9 @@ export function WhatsappCard() {
   const chats = MHB.whatsapp;
   return (
     <div className="card">
-      <div className="head"><div className="t"><span className="ico"><I.chat size={17} /></span>WhatsApp</div><button className="more">Abrir <I.arrow size={13} /></button></div>
+      <div className="head"><div className="t"><span className="ico"><I.chat size={17} /></span>WhatsApp</div>
+        <button className="more" onClick={() => window.open("https://web.whatsapp.com", "_blank", "noopener")}>Abrir <I.arrow size={13} /></button>
+      </div>
       <div className="body" style={{ paddingTop: 6 }}>
         {chats.map((c) => (
           <div className="lrow" key={c.id} style={{ alignItems: "center" }}>
@@ -210,11 +241,26 @@ export function WhatsappCard() {
 /* ── Notas rápidas ──────────────────────────────────────── */
 export function NotesCard() {
   const [v, setV] = useLocalState("mhb_notes", MHB.notes);
+  const [saved, setSaved] = useState(true);
+  const timerRef = useRef(null);
+
+  const onChange = (e) => {
+    setV(e.target.value);
+    setSaved(false);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setSaved(true), 800);
+  };
+
   return (
     <div className="card">
-      <div className="head"><div className="t"><span className="ico"><I.note size={17} /></span>Notas rápidas</div><span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-4)" }}>salvo automaticamente</span></div>
+      <div className="head">
+        <div className="t"><span className="ico"><I.note size={17} /></span>Notas rápidas</div>
+        <span style={{ marginLeft: "auto", fontSize: 11, color: saved ? "var(--text-4)" : "var(--warn)", transition: "color .3s" }}>
+          {saved ? "salvo" : "salvando…"}
+        </span>
+      </div>
       <div className="body" style={{ paddingTop: 10 }}>
-        <textarea value={v} onChange={(e) => setV(e.target.value)} spellCheck={false}
+        <textarea value={v} onChange={onChange} spellCheck={false}
           style={{ width: "100%", minHeight: 96, resize: "vertical", border: "none", outline: "none", background: "transparent", color: "var(--text-2)", fontFamily: "inherit", fontSize: 13.5, lineHeight: 1.55, letterSpacing: "-0.005em" }} />
       </div>
     </div>
@@ -472,6 +518,8 @@ export default function TabHoje({ onAsk, onDebrief, onJoin, onCreate }) {
   const nReply = MHB.emails.filter((e) => e.needsReply).length;
   const nTasks = MHB.tasks.filter((x) => !x.done).length;
   const now = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const toMin = (t) => +t.slice(0, 2) * 60 + +t.slice(3);
+  const nMeetPM = MHB.agenda.filter((e) => e.kind === "meet" && toMin(e.time) >= 720).length;
 
   return (
     <>
@@ -481,7 +529,7 @@ export default function TabHoje({ onAsk, onDebrief, onJoin, onCreate }) {
           <span style={{ textTransform: "capitalize" }}>{dateStr}</span>
           <span><b>{nReply}</b> e-mails p/ responder</span>
           <span><b>{nTasks}</b> tarefas abertas</span>
-          <span><b>2</b> reuniões à tarde</span>
+          <span><b>{nMeetPM}</b> {nMeetPM === 1 ? "reunião" : "reuniões"} à tarde</span>
         </div>
 
         <div className="aibar">
