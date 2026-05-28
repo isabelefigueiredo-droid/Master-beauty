@@ -1,135 +1,178 @@
-import { useEffect } from 'react';
-import { useLocalState } from './shared.jsx';
-import { useTweaks, TweaksPanel, TweakSection, TweakRadio, TweakSelect } from './tweaks-panel.jsx';
-import { TabInicio } from './tab-inicio.jsx';
-import { TabEstudo } from './tab-estudo.jsx';
-import { TabTrabalho } from './tab-trabalho.jsx';
-import { TabVida } from './tab-vida.jsx';
-import { TabCasa } from './tab-casa.jsx';
-import { TabFinancas } from './tab-financas.jsx';
+import React, { useState, useEffect, useCallback } from 'react';
+import Icons from './icons.jsx';
+import TabHoje, { AIDrawer, DebriefModal, CommandPalette } from './tab-hoje.jsx';
+import TabPipeline from './tab-pipeline.jsx';
+import { initGoogleAuth, getStoredToken, signIn, signOut, isConfigured } from './google-auth.js';
 
-const TABS = [
-  { k: "inicio",   label: "Início",    ico: "✿", color: "var(--terracotta)" },
-  { k: "estudo",   label: "Estudo",    ico: "✎", color: "var(--olive)" },
-  { k: "trabalho", label: "Trabalho",  ico: "❍", color: "var(--blue)" },
-  { k: "vida",     label: "Vida",      ico: "❀", color: "var(--rose-deep)" },
-  { k: "casa",     label: "Casa",      ico: "⌂", color: "var(--mustard)" },
-  { k: "financas", label: "Finanças",  ico: "$", color: "var(--plum)" },
+const I = Icons;
+
+const NAV = [
+  { id: "hoje",     ic: "home",     label: "Hoje" },
+  { id: "inbox",    ic: "mail",     label: "Inbox",    dot: true },
+  { id: "agenda",   ic: "calendar", label: "Agenda" },
+  { id: "pipeline", ic: "drive",    label: "Pipeline" },
+  { id: "tarefas",  ic: "check",    label: "Tarefas" },
+  { id: "notas",    ic: "note",     label: "Notas" },
 ];
 
-const TWEAK_DEFAULTS = {
-  palette: "atelier",
-  density: "confortavel",
-  displayFont: "caprasimo",
-  decor: "on",
-  tone: "Amigável",
-};
+function Placeholder({ nav, onBack }) {
+  const item = NAV.find((n) => n.id === nav);
+  const Ico = I[item.ic];
+  return (
+    <div style={{ display: "grid", placeItems: "center", minHeight: "60vh", textAlign: "center" }}>
+      <div>
+        <div style={{ width: 64, height: 64, borderRadius: 16, background: "var(--surface)", border: "1px solid var(--bd)", display: "grid", placeItems: "center", margin: "0 auto 18px", color: "var(--text-3)" }}><Ico size={30} /></div>
+        <div className="eyebrow" style={{ marginBottom: 8 }}>Módulo</div>
+        <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 8 }}>{item.label}</div>
+        <div style={{ color: "var(--text-3)", fontSize: 15, maxWidth: 380, margin: "0 auto 22px" }}>
+          A visão completa de <span className="hl">{item.label}</span> entra aqui. Por enquanto, tudo o que importa já vive no hub <b>Hoje</b>.
+        </div>
+        <button onClick={onBack} style={{ height: 42, padding: "0 20px", borderRadius: 10, background: "var(--accent)", color: "var(--on-accent)", fontWeight: 700, fontSize: 14 }}>Voltar para Hoje</button>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
-  const [activeTab, setActiveTab] = useLocalState("isa.activeTab", "inicio");
-  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [nav, setNav]       = useState("hoje");
+  const [dark, setDark]     = useState(false);
+  const [accent, setAccent] = useState("yellow");
+  const [drawer, setDrawer] = useState(false);
+  const [seed, setSeed]     = useState("");
+  const [debrief, setDebrief] = useState(null);
+  const [palette, setPalette] = useState(false);
+  const [toast, setToast]   = useState(null);
+  const [googleConnected, setGoogleConnected] = useState(() => !!getStoredToken());
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.palette = t.palette;
-    root.dataset.density = t.density === "confortavel" ? "" : t.density;
-    root.dataset.decor = t.decor;
-    const fontMap = {
-      caprasimo: '"Caprasimo", Georgia, serif',
-      serifdisp: '"DM Serif Display", Georgia, serif',
-      caveat: '"Caveat", "Bradley Hand", cursive',
-    };
-    root.style.setProperty("--font-display", fontMap[t.displayFont] || fontMap.caprasimo);
-  }, [t]);
+    document.body.dataset.theme   = dark ? "dark" : "light";
+    document.body.dataset.accent  = accent;
+    document.body.dataset.density = "comfortable";
+  }, [dark, accent]);
 
-  const renderTab = () => {
-    switch (activeTab) {
-      case "inicio":   return <TabInicio goTo={setActiveTab} tone={t.tone} />;
-      case "estudo":   return <TabEstudo />;
-      case "trabalho": return <TabTrabalho />;
-      case "vida":     return <TabVida />;
-      case "casa":     return <TabCasa />;
-      case "financas": return <TabFinancas />;
-      default:         return null;
+  useEffect(() => { initGoogleAuth(); }, []);
+
+  const fireToast = useCallback((msg) => setToast(msg), []);
+
+  useEffect(() => {
+    if (toast) { const id = setTimeout(() => setToast(null), 2800); return () => clearTimeout(id); }
+  }, [toast]);
+
+  useEffect(() => {
+    const h = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setPalette((p) => !p); }
+      if (e.key === "Escape") setPalette(false);
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
+  const handleGoogleSignIn = useCallback(async () => {
+    try {
+      await signIn();
+      setGoogleConnected(true);
+      fireToast("Google conectado!");
+    } catch (e) {
+      if (e.message !== "popup_closed_by_user" && e.message !== "access_denied") {
+        fireToast("Erro ao conectar: " + e.message);
+      }
+    }
+  }, [fireToast]);
+
+  const handleGoogleSignOut = useCallback(() => {
+    signOut();
+    setGoogleConnected(false);
+    fireToast("Google desconectado.");
+  }, [fireToast]);
+
+  const askAI = (q) => {
+    if (/debrief/i.test(q)) { setDebrief({ title: "Daily — Squad Hunting Beauty", mode: "debrief" }); return; }
+    setSeed(q);
+    setDrawer(true);
+  };
+
+  const runCmd = (kind, payload) => {
+    if (kind === "nav") setNav(payload);
+    else if (kind === "ai") { setSeed(payload); setDrawer(true); }
+    else if (kind === "debrief") setDebrief(payload);
+    else if (kind === "create") {
+      if (payload === "debrief") setDebrief({ title: "Daily — Squad Hunting Beauty", mode: "debrief" });
+      else fireToast("Novo " + payload + " — abrindo…");
     }
   };
 
-  const now = new Date();
-  const dataCurta = `${now.getDate()}/${now.getMonth()+1}`;
+  const curNav = NAV.find((n) => n.id === nav);
+  const configured = isConfigured();
 
   return (
     <div className="app">
-      <header className="app-header">
+      {/* Rail */}
+      <nav className="rail">
         <div className="logo">
-          isa<span className="dot"></span>
-          <span className="small">painel da vida</span>
+          <img src={dark ? "/assets/mercado-libre-monochrome.png" : "/assets/mercado-libre.png"} alt="ML"
+            onError={(e) => { e.target.style.display = "none"; }} />
         </div>
-        <div className="header-meta">
-          <span className="weather">☀️ 24° SP</span>
-          <span>{dataCurta}</span>
-          <div className="avatar">I</div>
-        </div>
-      </header>
-
-      <nav className="tabs-row" role="tablist">
-        {TABS.map(tab => (
-          <button key={tab.k}
-            role="tab"
-            aria-selected={activeTab === tab.k}
-            className="tab"
-            onClick={() => setActiveTab(tab.k)}>
-            <span className="ico" style={{ color: tab.color }}>{tab.ico}</span>
-            {tab.label}
-          </button>
-        ))}
+        {NAV.map((n) => {
+          const Ico = I[n.ic];
+          return (
+            <button key={n.id} className={"rnav" + (nav === n.id ? " on" : "")} onClick={() => setNav(n.id)}>
+              <Ico size={21} />
+              {n.dot && nav !== n.id && <span className="dot" />}
+              <span className="rtip">{n.label}</span>
+            </button>
+          );
+        })}
+        <div className="spacer" />
+        <button className="rnav" onClick={() => setDark((d) => !d)}>
+          {dark ? <I.sun size={20} /> : <I.moon size={20} />}
+          <span className="rtip">{dark ? "Tema claro" : "Tema escuro"}</span>
+        </button>
+        <button className="rnav" onClick={() => setAccent((a) => a === "yellow" ? "navy" : "yellow")}>
+          <span style={{ width: 16, height: 16, borderRadius: 999, background: accent === "yellow" ? "#FFE600" : "#2D3277", border: "2px solid var(--bd-2)" }} />
+          <span className="rtip">Alternar cor</span>
+        </button>
       </nav>
 
-      <main className="surface" data-screen-label={`Tab: ${activeTab}`}>
-        {renderTab()}
-      </main>
+      {/* Main */}
+      <div className="main">
+        <div className="topbar">
+          <div className="crumb">{curNav.label} <span className="sub">· Master Hunting Beauty</span></div>
+          <div className="grow" />
+          <button className="kbtn" onClick={() => setPalette(true)}>
+            <I.search size={16} /> Buscar ou executar comando <span className="kk">⌘K</span>
+          </button>
+          <div className="avatar" title="Isabele · Hunter Beauty">IS</div>
+        </div>
 
-      <footer style={{ textAlign: "center", marginTop: 28, fontFamily: "var(--font-hand)", fontSize: 18, color: "var(--ink-mute)" }}>
-        feito com cuidado · pequenos passos, todos os dias ✿
-      </footer>
+        <div className="scroll">
+          <div className="canvas">
+            {nav === "hoje" && (
+              <TabHoje
+                onAsk={askAI}
+                onDebrief={setDebrief}
+                onJoin={() => fireToast("Abrindo Google Meet…")}
+                onCreate={(k) => runCmd("create", k)}
+                googleConnected={googleConnected}
+                onGoogleSignIn={configured ? handleGoogleSignIn : null}
+                onGoogleSignOut={configured ? handleGoogleSignOut : null} />
+            )}
+            {nav === "pipeline" && <TabPipeline />}
+            {(nav === "inbox" || nav === "agenda" || nav === "tarefas" || nav === "notas") && (
+              <Placeholder nav={nav} onBack={() => setNav("hoje")} />
+            )}
+          </div>
+        </div>
+      </div>
 
-      <TweaksPanel title="Tweaks">
-        <TweakSection label="Visual">
-          <TweakSelect label="paleta" value={t.palette} onChange={v => setTweak("palette", v)}
-            options={[
-              { value: "atelier", label: "atelier (creme + terracota)" },
-              { value: "oliveira", label: "oliveira (tons terrosos)" },
-              { value: "rosa", label: "rosa (gourmand)" },
-              { value: "azulao", label: "azulão (mediterrâneo)" },
-              { value: "noite", label: "noite (escuro)" },
-            ]} />
-          <TweakRadio label="densidade" value={t.density} onChange={v => setTweak("density", v)}
-            options={[
-              { value: "confortavel", label: "confortável" },
-              { value: "compacto", label: "compacto" },
-            ]} />
-          <TweakSelect label="fonte display" value={t.displayFont} onChange={v => setTweak("displayFont", v)}
-            options={[
-              { value: "caprasimo", label: "Caprasimo (chunky serif)" },
-              { value: "serifdisp", label: "DM Serif Display" },
-              { value: "caveat", label: "Caveat (manual)" },
-            ]} />
-          <TweakRadio label="decorações" value={t.decor} onChange={v => setTweak("decor", v)}
-            options={[
-              { value: "on", label: "stickers" },
-              { value: "off", label: "limpo" },
-            ]} />
-        </TweakSection>
+      <AIDrawer open={drawer} seed={seed} onClose={() => setDrawer(false)} onDebrief={setDebrief} />
+      <DebriefModal meeting={debrief} onClose={() => setDebrief(null)} toast={fireToast} />
+      <CommandPalette open={palette} onClose={() => setPalette(false)} onRun={runCmd} />
 
-        <TweakSection label="Conteúdo">
-          <TweakSelect label="tom de voz" value={t.tone} onChange={v => setTweak("tone", v)}
-            options={[
-              { value: "Profissional e direto", label: "Profissional" },
-              { value: "Amigável", label: "Amigável" },
-              { value: "Minimalista", label: "Minimalista" },
-              { value: "Bem-humorado", label: "Bem-humorado" },
-            ]} />
-        </TweakSection>
-      </TweaksPanel>
+      {toast && (
+        <div className="fade-in" style={{ position: "fixed", bottom: 26, left: "50%", transform: "translateX(-50%)", background: "var(--text)", color: "var(--bg)", padding: "12px 20px", borderRadius: 11, fontSize: 14, fontWeight: 600, boxShadow: "var(--shadow-pop)", zIndex: 120, display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ color: "var(--accent)" }}><I.check size={16} sw={3} /></span>{toast}
+        </div>
+      )}
     </div>
   );
 }
