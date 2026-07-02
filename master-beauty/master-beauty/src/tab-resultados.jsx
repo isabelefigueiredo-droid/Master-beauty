@@ -2,52 +2,53 @@ import React, { useState } from 'react';
 import { useLocalState } from './shared.jsx';
 import { MHB } from './data.js';
 
-function fmtBRL(n) {
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-}
+const VERTICALS = ["Todos", "BEAUTY", "FASHION", "CPG", "FURNISHING & HOUSEWARE", "SPORTS", "CONSTRUCTION & INDUSTRY", "VEHICLE PARTS & ACCESSORIES", "T & B"];
+const STAGES    = ["Todos", "Not initiated", "Negotiation", "Setup", "3P Go Live", "Onboarded"];
+const STAGE_COLOR = {
+  "Not initiated": { bg: "var(--surface-2)", color: "var(--text-3)" },
+  "Negotiation":   { bg: "#FFF3CD",          color: "#856404" },
+  "Setup":         { bg: "#CCE5FF",          color: "#004085" },
+  "3P Go Live":    { bg: "#D4EDDA",          color: "#155724" },
+  "Onboarded":     { bg: "var(--ok)",        color: "#fff" },
+};
 
-function fmtPct(meta, realizado) {
-  if (!meta) return "—";
-  const p = (realizado / meta) * 100;
-  return p.toFixed(1) + "%";
-}
-
-function StatusBadge({ status }) {
-  const colors = {
-    "Acima da meta":   { bg: "var(--ok)",    color: "#fff" },
-    "Meta atingida":   { bg: "var(--accent)", color: "var(--on-accent)" },
-    "Abaixo da meta":  { bg: "var(--crit)",  color: "#fff" },
-  };
-  const s = colors[status] || { bg: "var(--surface-2)", color: "var(--text-2)" };
+function StageBadge({ stage }) {
+  const s = STAGE_COLOR[stage] || { bg: "var(--surface-2)", color: "var(--text-3)" };
   return (
     <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: s.bg, color: s.color, whiteSpace: "nowrap" }}>
-      {status}
+      {stage || "—"}
     </span>
   );
 }
 
-function ProgressBar({ meta, realizado }) {
-  const pct = meta ? Math.min((realizado / meta) * 100, 120) : 0;
-  const over = realizado > meta;
+function BoolChip({ value }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 120 }}>
-      <div style={{ flex: 1, height: 6, background: "var(--bd)", borderRadius: 99, overflow: "hidden" }}>
-        <div style={{ width: Math.min(pct, 100) + "%", height: "100%", background: over ? "var(--ok)" : "var(--accent)", borderRadius: 99, transition: "width .3s" }} />
-      </div>
-      <span style={{ fontSize: 11, fontWeight: 700, color: over ? "var(--ok)" : "var(--text-2)", minWidth: 40, textAlign: "right" }}>
-        {fmtPct(meta, realizado)}
-      </span>
-    </div>
+    <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: value ? "var(--ok)" : "var(--surface-2)", color: value ? "#fff" : "var(--text-4)" }}>
+      {value ? "Sim" : "Não"}
+    </span>
+  );
+}
+
+function CopyCell({ value }) {
+  const [copied, setCopied] = useState(false);
+  if (!value) return <span style={{ color: "var(--text-4)", fontSize: 12 }}>—</span>;
+  const copy = () => { navigator.clipboard?.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1500); };
+  return (
+    <span onClick={copy} title="Clique para copiar"
+      style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-3)", cursor: "pointer", borderBottom: "1px dashed var(--bd-2)", whiteSpace: "nowrap" }}>
+      {copied ? "✓ copiado" : value}
+    </span>
   );
 }
 
 export default function TabResultados() {
-  const [rows, setRows] = useLocalState("mhb_resultados", MHB.resultados);
-  const [sortKey, setSortKey]   = useState("marca");
-  const [sortDir, setSortDir]   = useState(1);
-  const [filterStatus, setFilterStatus] = useState("Todos");
-  const [search, setSearch]     = useState("");
-  const [exportMsg, setExportMsg] = useState("");
+  const [rows, setRows]             = useLocalState("mhb_resultados_v2", MHB.resultados);
+  const [sortKey, setSortKey]       = useState("huntingName");
+  const [sortDir, setSortDir]       = useState(1);
+  const [filterVertical, setFilterVertical] = useState("Todos");
+  const [filterStage, setFilterStage]       = useState("Todos");
+  const [search, setSearch]         = useState("");
+  const [exportMsg, setExportMsg]   = useState("");
 
   const toggle = (k) => {
     if (sortKey === k) setSortDir((d) => -d);
@@ -55,35 +56,45 @@ export default function TabResultados() {
   };
 
   const Th = ({ k, children, align }) => (
-    <th onClick={() => toggle(k)} style={{ cursor: "pointer", textAlign: align || "left", userSelect: "none" }}>
+    <th onClick={() => toggle(k)}
+      style={{ cursor: "pointer", textAlign: align || "left", userSelect: "none", whiteSpace: "nowrap" }}>
       {children}{sortKey === k ? (sortDir === 1 ? " ↑" : " ↓") : ""}
     </th>
   );
 
-  const STATUS_OPTIONS = ["Todos", "Acima da meta", "Meta atingida", "Abaixo da meta"];
-
   const filtered = rows
-    .filter((r) => filterStatus === "Todos" || r.status === filterStatus)
-    .filter((r) => !search || r.marca.toLowerCase().includes(search.toLowerCase()) || r.cust.toLowerCase().includes(search.toLowerCase()) || r.lojaOficial.toLowerCase().includes(search.toLowerCase()))
+    .filter((r) => filterVertical === "Todos" || r.verticalSf === filterVertical)
+    .filter((r) => filterStage   === "Todos" || r.huntingStage === filterStage)
+    .filter((r) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return r.huntingName.toLowerCase().includes(q)
+          || r.cusCustId.includes(q)
+          || r.officialStoreId.includes(q)
+          || r.huntingId.toLowerCase().includes(q)
+          || r.hunterName.toLowerCase().includes(q);
+    })
     .sort((a, b) => {
       const av = a[sortKey] ?? ""; const bv = b[sortKey] ?? "";
       return (av < bv ? -1 : av > bv ? 1 : 0) * sortDir;
     });
 
-  const totalMeta      = rows.reduce((s, r) => s + r.gmvMeta, 0);
-  const totalRealizado = rows.reduce((s, r) => s + r.gmvRealizado, 0);
-  const totalPedidos   = rows.reduce((s, r) => s + r.pedidos, 0);
-
-  const updateRow = (id, patch) => setRows((rs) => rs.map((r) => r.id === id ? { ...r, ...patch } : r));
+  const onboarded  = rows.filter((r) => r.huntingStage === "Onboarded").length;
+  const goLive     = rows.filter((r) => r.huntingStage === "3P Go Live").length;
+  const inProgress = rows.filter((r) => !["Onboarded", "Not initiated"].includes(r.huntingStage)).length;
 
   const exportCSV = () => {
-    const h = ["Marca", "CUST", "ID Loja Oficial", "Período", "GMV Meta", "GMV Realizado", "Atingimento", "Pedidos", "Ticket Médio", "Status"];
-    const data = rows.map((r) => [r.marca, r.cust, r.lojaOficial, r.periodoRef, r.gmvMeta, r.gmvRealizado, fmtPct(r.gmvMeta, r.gmvRealizado), r.pedidos, r.ticketMedio.toFixed(2), r.status]
-      .map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    const h = ["SIT_SITE_ID","HUNTING_ID","HUNTING_NAME","CUS_CUST_ID","OFFICIAL_STORE_ID","HUNTER_NAME","HUNTING_STATUS","HUNTING_STAGE","RECORD_TYPE","TIER","CORP_FLAG","EXTRA_PLAN_FLAG","PARTY_TYPE_ID","FECHA_ONBOARDADED","VERTICAL_SF","DOMAIN_AGG1_SF"];
+    const data = rows.map((r) => [
+      r.siteSiteId, r.huntingId, r.huntingName, r.cusCustId, r.officialStoreId,
+      r.hunterName, r.huntingStatus, r.huntingStage, r.recordType, r.tier,
+      r.corpFlag, r.extraPlanFlag, r.partyTypeId, r.fechaOnboardaded,
+      r.verticalSf, r.domainAgg1Sf,
+    ].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","));
     const csv = [h.join(","), ...data].join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
-    a.download = "resultados-vendas-beauty.csv";
+    a.download = "dm_mkp_hunting_beauty.csv";
     a.click();
     setExportMsg("✓ CSV exportado");
     setTimeout(() => setExportMsg(""), 2500);
@@ -94,25 +105,22 @@ export default function TabResultados() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 20, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>Resultado de Vendas</div>
-          <div style={{ fontSize: 13, color: "var(--text-4)", marginTop: 2 }}>
-            <b style={{ color: "var(--text)" }}>{rows.length}</b> lojas · Meta total:{" "}
-            <b style={{ color: "var(--text)" }}>{fmtBRL(totalMeta)}</b> · Realizado:{" "}
-            <b style={{ color: totalRealizado >= totalMeta ? "var(--ok)" : "var(--crit)" }}>{fmtBRL(totalRealizado)}</b>
-            {" · "}{totalPedidos.toLocaleString("pt-BR")} pedidos
+          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-0.025em" }}>Huntings · MLB 2026</div>
+          <div style={{ fontSize: 12, color: "var(--text-4)", marginTop: 3, fontFamily: "var(--font-mono)" }}>
+            DM_MKP_HUNTING · 3P · 2-LOCAL · site MLB
           </div>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar marca, CUST, loja…"
-            style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: "var(--surface)", color: "var(--text)", fontSize: 13, outline: "none", minWidth: 200 }} />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: "var(--surface)", color: "var(--text-2)", fontSize: 13, fontFamily: "inherit" }}>
-            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          <input value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar nome, CUST, loja, hunter…"
+            style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: "var(--surface)", color: "var(--text)", fontSize: 13, outline: "none", minWidth: 220 }} />
+          <select value={filterVertical} onChange={(e) => setFilterVertical(e.target.value)}
+            style={{ height: 34, padding: "0 10px", borderRadius: 9, border: "1px solid var(--bd)", background: "var(--surface)", color: "var(--text-2)", fontSize: 12, fontFamily: "inherit" }}>
+            {VERTICALS.map((v) => <option key={v} value={v}>{v === "Todos" ? "Todas as verticais" : v}</option>)}
+          </select>
+          <select value={filterStage} onChange={(e) => setFilterStage(e.target.value)}
+            style={{ height: 34, padding: "0 10px", borderRadius: 9, border: "1px solid var(--bd)", background: "var(--surface)", color: "var(--text-2)", fontSize: 12, fontFamily: "inherit" }}>
+            {STAGES.map((s) => <option key={s} value={s}>{s === "Todos" ? "Todos os estágios" : s}</option>)}
           </select>
           <button onClick={exportCSV}
             style={{ display: "flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: exportMsg ? "var(--ok)" : "var(--surface)", color: exportMsg ? "#fff" : "var(--text-3)", fontWeight: 600, fontSize: 13, transition: "all .2s" }}>
@@ -121,17 +129,18 @@ export default function TabResultados() {
         </div>
       </div>
 
-      {/* KPI row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 20 }}>
+      {/* KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
         {[
-          { label: "Acima da meta",  count: rows.filter((r) => r.status === "Acima da meta").length,  color: "var(--ok)" },
-          { label: "Meta atingida",  count: rows.filter((r) => r.status === "Meta atingida").length,  color: "var(--accent)" },
-          { label: "Abaixo da meta", count: rows.filter((r) => r.status === "Abaixo da meta").length, color: "var(--crit)" },
-          { label: "Atingimento geral", count: fmtPct(totalMeta, totalRealizado), color: totalRealizado >= totalMeta ? "var(--ok)" : "var(--crit)" },
-        ].map((kpi) => (
-          <div key={kpi.label} className="card" style={{ padding: "14px 18px" }}>
-            <div style={{ fontSize: 11, color: "var(--text-4)", fontWeight: 600, marginBottom: 4 }}>{kpi.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: kpi.color, letterSpacing: "-0.03em" }}>{kpi.count}</div>
+          { label: "Total huntings",  value: rows.length,    color: "var(--text)" },
+          { label: "Onboarded",       value: onboarded,      color: "var(--ok)" },
+          { label: "3P Go Live",      value: goLive,         color: "#2a9d8f" },
+          { label: "Em andamento",    value: inProgress,     color: "var(--accent)" },
+          { label: "Exibindo",        value: filtered.length, color: "var(--text-3)" },
+        ].map((k) => (
+          <div key={k.label} className="card" style={{ padding: "14px 18px" }}>
+            <div style={{ fontSize: 11, color: "var(--text-4)", fontWeight: 600, marginBottom: 4 }}>{k.label}</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: k.color, letterSpacing: "-0.03em" }}>{k.value}</div>
           </div>
         ))}
       </div>
@@ -142,50 +151,48 @@ export default function TabResultados() {
           <table className="pipe-table">
             <thead>
               <tr>
-                <Th k="marca">Marca</Th>
-                <Th k="cust">CUST</Th>
-                <Th k="lojaOficial">ID Loja Oficial</Th>
-                <Th k="periodoRef">Período</Th>
-                <Th k="gmvMeta" align="right">GMV Meta</Th>
-                <Th k="gmvRealizado" align="right">GMV Realizado</Th>
-                <th>Atingimento</th>
-                <Th k="pedidos" align="right">Pedidos</Th>
-                <Th k="ticketMedio" align="right">Ticket Médio</Th>
-                <Th k="status">Status</Th>
+                <Th k="huntingId">Hunting ID</Th>
+                <Th k="huntingName">Hunting Name</Th>
+                <Th k="cusCustId">CUS_CUST_ID</Th>
+                <Th k="officialStoreId">Official Store ID</Th>
+                <Th k="hunterName">Hunter</Th>
+                <Th k="huntingStatus">Status</Th>
+                <Th k="huntingStage">Stage</Th>
+                <Th k="tier">Tier</Th>
+                <Th k="extraPlanFlag">Extra Plan</Th>
+                <Th k="fechaOnboardaded">Fecha Onboarded</Th>
+                <Th k="verticalSf">Vertical</Th>
+                <Th k="domainAgg1Sf">Domínio</Th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={10} style={{ textAlign: "center", padding: "32px 0", color: "var(--text-4)" }}>Nenhum resultado encontrado.</td></tr>
+                <tr>
+                  <td colSpan={12} style={{ textAlign: "center", padding: "32px 0", color: "var(--text-4)" }}>
+                    Nenhum hunting encontrado com os filtros aplicados.
+                  </td>
+                </tr>
               )}
               {filtered.map((r) => (
                 <tr key={r.id}>
-                  <td style={{ fontWeight: 700, minWidth: 160 }}>
-                    <input value={r.marca} onChange={(e) => updateRow(r.id, { marca: e.target.value })}
-                      style={{ border: "none", background: "transparent", fontFamily: "inherit", fontSize: "inherit", fontWeight: 700, color: "var(--text)", width: "100%", outline: "none" }} />
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-4)", whiteSpace: "nowrap" }}>{r.huntingId}</td>
+                  <td style={{ fontWeight: 700, minWidth: 180 }}>{r.huntingName}</td>
+                  <td><CopyCell value={r.cusCustId} /></td>
+                  <td><CopyCell value={r.officialStoreId} /></td>
+                  <td style={{ fontSize: 13, whiteSpace: "nowrap" }}>{r.hunterName}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 12, color: "var(--text-3)" }}>{r.huntingStatus}</span>
                   </td>
+                  <td><StageBadge stage={r.huntingStage} /></td>
+                  <td style={{ fontSize: 12, fontWeight: 700, color: r.tier === "Gold" ? "#b8860b" : r.tier === "Silver" ? "var(--text-3)" : "var(--text-4)" }}>
+                    {r.tier}
+                  </td>
+                  <td style={{ textAlign: "center" }}><BoolChip value={r.extraPlanFlag} /></td>
                   <td style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-3)", whiteSpace: "nowrap" }}>
-                    <input value={r.cust} onChange={(e) => updateRow(r.id, { cust: e.target.value })}
-                      style={{ border: "none", background: "transparent", fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-3)", width: "100%", outline: "none" }} />
+                    {r.fechaOnboardaded || "—"}
                   </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-3)", whiteSpace: "nowrap" }}>
-                    <input value={r.lojaOficial} onChange={(e) => updateRow(r.id, { lojaOficial: e.target.value })}
-                      style={{ border: "none", background: "transparent", fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-3)", width: "100%", outline: "none" }} />
-                  </td>
-                  <td style={{ fontSize: 12, color: "var(--text-3)", whiteSpace: "nowrap" }}>
-                    <input value={r.periodoRef} onChange={(e) => updateRow(r.id, { periodoRef: e.target.value })}
-                      style={{ border: "none", background: "transparent", fontFamily: "inherit", fontSize: 12, color: "var(--text-3)", width: 80, outline: "none" }} />
-                  </td>
-                  <td className="mono" style={{ textAlign: "right", whiteSpace: "nowrap" }}>{fmtBRL(r.gmvMeta)}</td>
-                  <td className="mono" style={{ textAlign: "right", whiteSpace: "nowrap", fontWeight: 700, color: r.gmvRealizado >= r.gmvMeta ? "var(--ok)" : "var(--crit)" }}>
-                    {fmtBRL(r.gmvRealizado)}
-                  </td>
-                  <td style={{ minWidth: 160 }}>
-                    <ProgressBar meta={r.gmvMeta} realizado={r.gmvRealizado} />
-                  </td>
-                  <td className="mono" style={{ textAlign: "right" }}>{r.pedidos.toLocaleString("pt-BR")}</td>
-                  <td className="mono" style={{ textAlign: "right" }}>{fmtBRL(r.ticketMedio)}</td>
-                  <td><StatusBadge status={r.status} /></td>
+                  <td style={{ fontSize: 11, fontWeight: 600, color: "var(--text-2)", whiteSpace: "nowrap" }}>{r.verticalSf}</td>
+                  <td style={{ fontSize: 12, color: "var(--text-3)" }}>{r.domainAgg1Sf}</td>
                 </tr>
               ))}
             </tbody>
