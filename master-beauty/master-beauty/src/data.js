@@ -48,6 +48,15 @@ export const MHB = {
     "Rascunhar resposta para a Glowé",
   ],
 
+  resultados: [
+    { id: "r1", marca: "Glowé Cosméticos",   cust: "CUST-00123456", lojaOficial: "LO-98201", gmvMeta: 50000, gmvRealizado: 47200, pedidos: 312, ticketMedio: 151.28, periodoRef: "Jun/2026", status: "Abaixo da meta" },
+    { id: "r2", marca: "Dermavita",           cust: "CUST-00234567", lojaOficial: "LO-87340", gmvMeta: 30000, gmvRealizado: 33800, pedidos: 198, ticketMedio: 170.71, periodoRef: "Jun/2026", status: "Acima da meta" },
+    { id: "r3", marca: "Bloom Cosméticos",    cust: "CUST-00345678", lojaOficial: "LO-76512", gmvMeta: 20000, gmvRealizado: 18500, pedidos: 145, ticketMedio: 127.59, periodoRef: "Jun/2026", status: "Abaixo da meta" },
+    { id: "r4", marca: "Skincare Coreana X",  cust: "CUST-00456789", lojaOficial: "LO-65403", gmvMeta: 80000, gmvRealizado: 82100, pedidos: 520, ticketMedio: 157.88, periodoRef: "Jun/2026", status: "Acima da meta" },
+    { id: "r5", marca: "BeautyBrand W",       cust: "CUST-00567890", lojaOficial: "LO-54290", gmvMeta: 45000, gmvRealizado: 45000, pedidos: 290, ticketMedio: 155.17, periodoRef: "Jun/2026", status: "Meta atingida" },
+    { id: "r6", marca: "Cosméticos V",        cust: "CUST-00678901", lojaOficial: "LO-43182", gmvMeta: 20000, gmvRealizado: 21400, pedidos: 175, ticketMedio: 122.29, periodoRef: "Jun/2026", status: "Acima da meta" },
+  ],
+
   pipeline: [
     { id: "p1", name: "Glowé Cosméticos", stage: "Negotiation", segment: "Skincare", sellerOrBrand: "Brand", gmvMonth: 50000, gmvYear: 600000, tiktok: false, shoppee: true, notes: "Proposta enviada — aceite dos 14%" },
     { id: "p2", name: "Dermavita", stage: "Setup", segment: "Dermocosméticos", sellerOrBrand: "Brand", gmvMonth: 30000, gmvYear: 360000, tiktok: false, shoppee: false, notes: "Documentação enviada" },

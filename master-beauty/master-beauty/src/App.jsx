@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Icons from './icons.jsx';
 import TabHoje, { AIDrawer, DebriefModal, CommandPalette } from './tab-hoje.jsx';
 import TabPipeline from './tab-pipeline.jsx';
+import TabResultados from './tab-resultados.jsx';
 
 const I = Icons;
 
@@ -9,7 +10,8 @@ const NAV = [
   { id: "hoje",     ic: "home",     label: "Hoje" },
   { id: "inbox",    ic: "mail",     label: "Inbox",    dot: true },
   { id: "agenda",   ic: "calendar", label: "Agenda" },
-  { id: "pipeline", ic: "drive",    label: "Pipeline" },
+  { id: "pipeline",    ic: "drive",  label: "Pipeline" },
+  { id: "resultados",  ic: "table", label: "Resultados" },
   { id: "tarefas",  ic: "check",    label: "Tarefas" },
   { id: "notas",    ic: "note",     label: "Notas" },
 ];
@@ -130,6 +132,7 @@ export default function App() {
                 onCreate={(k) => runCmd("create", k)} />
             )}
             {nav === "pipeline" && <TabPipeline />}
+            {nav === "resultados" && <TabResultados />}
             {(nav === "inbox" || nav === "agenda" || nav === "tarefas" || nav === "notas") && (
               <Placeholder nav={nav} onBack={() => setNav("hoje")} />
             )}
