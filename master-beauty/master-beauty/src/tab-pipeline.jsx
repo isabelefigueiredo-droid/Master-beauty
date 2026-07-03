@@ -268,6 +268,96 @@ function PipeTable({ brands, onUpdate, onDelete, segmentOptions, onAddSegment })
   );
 }
 
+/* ── Sales Volume by Item ID ────────────────────────────── */
+function VolumeTable({ brands }) {
+  const [sortKey, setSortKey] = useState("salesVolume");
+  const [sortDir, setSortDir] = useState(-1);
+  const [filterBrand, setFilterBrand] = useState("all");
+  const [search, setSearch] = useState("");
+
+  const allItems = brands.flatMap((b) =>
+    (b.items || []).map((it) => ({ ...it, brandName: b.name, brandId: b.id, stage: b.stage, segment: b.segment }))
+  );
+
+  const filtered = allItems.filter((it) => {
+    const matchBrand = filterBrand === "all" || it.brandId === filterBrand;
+    const q = search.toLowerCase();
+    const matchSearch = !q || it.itemId.toLowerCase().includes(q) || it.itemName.toLowerCase().includes(q) || it.brandName.toLowerCase().includes(q);
+    return matchBrand && matchSearch;
+  });
+
+  const toggle = (k) => { if (sortKey === k) setSortDir((d) => -d); else { setSortKey(k); setSortDir(-1); } };
+  const sorted = [...filtered].sort((a, b) => {
+    const av = a[sortKey] ?? ""; const bv = b[sortKey] ?? "";
+    return (av < bv ? -1 : av > bv ? 1 : 0) * sortDir;
+  });
+
+  const totalVolume = filtered.reduce((s, it) => s + it.salesVolume, 0);
+  const totalGMV = filtered.reduce((s, it) => s + it.salesVolume * it.price, 0);
+
+  const Th = ({ k, children, right }) => (
+    <th onClick={() => toggle(k)} style={{ cursor: "pointer", textAlign: right ? "right" : "left" }}>
+      {children}{sortKey === k ? (sortDir === 1 ? " ↑" : " ↓") : ""}
+    </th>
+  );
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por item, ID ou marca…"
+          style={{ height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: "var(--bg)", color: "var(--text)", fontFamily: "inherit", fontSize: 13, flex: "1 1 200px", outline: "none" }} />
+        <select value={filterBrand} onChange={(e) => setFilterBrand(e.target.value)}
+          style={{ height: 34, padding: "0 10px", borderRadius: 9, border: "1px solid var(--bd)", background: "var(--bg)", color: "var(--text)", fontFamily: "inherit", fontSize: 13 }}>
+          <option value="all">Todas as marcas</option>
+          {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+        </select>
+        <div style={{ fontSize: 12, color: "var(--text-4)", marginLeft: "auto" }}>
+          <b style={{ color: "var(--text)" }}>{sorted.length}</b> itens · <b style={{ color: "var(--text)" }}>{totalVolume.toLocaleString("pt-BR")}</b> un/mês · GMV estimado: <b style={{ color: "var(--text)" }}>{fmtBRL(totalGMV)}</b>
+        </div>
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <table className="pipe-table">
+          <thead>
+            <tr>
+              <Th k="itemId">Item ID (MLM)</Th>
+              <Th k="itemName">Produto</Th>
+              <Th k="brandName">Marca</Th>
+              <Th k="segment">Segmento</Th>
+              <Th k="stage">Estágio</Th>
+              <Th k="price" right>Preço</Th>
+              <Th k="salesVolume" right>Vol./mês (un)</Th>
+              <th style={{ textAlign: "right" }}>GMV estimado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.map((it) => (
+              <tr key={it.itemId}>
+                <td className="mono" style={{ fontSize: 12, color: "var(--text-3)", whiteSpace: "nowrap" }}>{it.itemId}</td>
+                <td style={{ fontWeight: 600, minWidth: 220 }}>{it.itemName}</td>
+                <td style={{ whiteSpace: "nowrap" }}>{it.brandName}</td>
+                <td><span className="tag">{it.segment}</span></td>
+                <td><span className={"stage-badge " + STAGE_CLASS[it.stage]}>{it.stage}</span></td>
+                <td className="mono" style={{ textAlign: "right", whiteSpace: "nowrap" }}>{fmtBRL(it.price)}</td>
+                <td className="mono" style={{ textAlign: "right", fontWeight: 700, color: "var(--text)" }}>
+                  {it.salesVolume.toLocaleString("pt-BR")}
+                </td>
+                <td className="mono" style={{ textAlign: "right", whiteSpace: "nowrap", color: "var(--text-2)" }}>
+                  {fmtBRL(it.salesVolume * it.price)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--bd)", fontSize: 12, color: "var(--text-4)" }}>
+        Dados simulados com base em <code style={{ fontFamily: "var(--font-mono)" }}>meli-bi-data.WHOWNER.LK_ITE_ITEMS</code>. IDs no formato MLB são referência de item Mercado Livre.
+      </div>
+    </div>
+  );
+}
+
 /* ── Tab Pipeline ───────────────────────────────────────── */
 export default function TabPipeline() {
   const [brands, setBrands] = useLocalState("mhb_pipeline", MHB.pipeline);
@@ -337,6 +427,10 @@ export default function TabPipeline() {
             style={{ display: "flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: view === "table" ? "var(--text)" : "var(--surface)", color: view === "table" ? "var(--bg)" : "var(--text-3)", fontWeight: 600, fontSize: 13 }}>
             <I.table size={15} /> Tabela
           </button>
+          <button onClick={() => setView("volume")}
+            style={{ display: "flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: view === "volume" ? "var(--text)" : "var(--surface)", color: view === "volume" ? "var(--bg)" : "var(--text-3)", fontWeight: 600, fontSize: 13 }}>
+            <I.chart size={15} /> Volume por Item
+          </button>
           <button onClick={exportCSV}
             style={{ display: "flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px", borderRadius: 9, border: "1px solid var(--bd)", background: exportMsg ? "var(--ok)" : "var(--surface)", color: exportMsg ? "#fff" : "var(--text-3)", fontWeight: 600, fontSize: 13, transition: "all .2s" }}>
             <I.filePresent size={15} /> {exportMsg || "Exportar CSV"}
@@ -352,7 +446,15 @@ export default function TabPipeline() {
         </div>
       </div>
 
-      {view === "kanban" ? (
+      {view === "volume" && (
+        <div className="card">
+          <div className="body">
+            <VolumeTable brands={brands} />
+          </div>
+        </div>
+      )}
+
+      {view !== "volume" && view === "kanban" ? (
         <div className="pipe-board">
           {STAGES.map((stage) => (
             <StageCol key={stage} stage={stage}
@@ -366,13 +468,13 @@ export default function TabPipeline() {
               onAddSegment={addSegment} />
           ))}
         </div>
-      ) : (
+      ) : view === "table" ? (
         <div className="card">
           <div className="body" style={{ padding: 0, overflowX: "auto" }}>
             <PipeTable brands={brands} onUpdate={update} onDelete={remove} segmentOptions={segments} onAddSegment={addSegment} />
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

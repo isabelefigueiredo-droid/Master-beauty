@@ -49,11 +49,45 @@ export const MHB = {
   ],
 
   pipeline: [
-    { id: "p1", name: "Glowé Cosméticos", stage: "Negotiation", segment: "Skincare", sellerOrBrand: "Brand", gmvMonth: 50000, gmvYear: 600000, tiktok: false, shoppee: true, notes: "Proposta enviada — aceite dos 14%" },
-    { id: "p2", name: "Dermavita", stage: "Setup", segment: "Dermocosméticos", sellerOrBrand: "Brand", gmvMonth: 30000, gmvYear: 360000, tiktok: false, shoppee: false, notes: "Documentação enviada" },
-    { id: "p3", name: "Bloom Cosméticos", stage: "Not initiated", segment: "Maquiagem", sellerOrBrand: "Brand", gmvMonth: 20000, gmvYear: 240000, tiktok: true, shoppee: false, notes: "Remarcar call pra quinta" },
-    { id: "p4", name: "Skincare Coreana X", stage: "Negotiation", segment: "Skincare", sellerOrBrand: "Brand", gmvMonth: 80000, gmvYear: 960000, tiktok: true, shoppee: true, notes: "" },
-    { id: "p5", name: "BeautyBrand W", stage: "3P Go Live", segment: "Haircare", sellerOrBrand: "Brand", gmvMonth: 45000, gmvYear: 540000, tiktok: true, shoppee: false, notes: "Go live semana que vem" },
-    { id: "p6", name: "Cosméticos V", stage: "Onboarded", segment: "Skincare", sellerOrBrand: "Seller", gmvMonth: 20000, gmvYear: 240000, tiktok: false, shoppee: true, notes: "Onboarding concluído ✓" },
+    { id: "p1", name: "Glowé Cosméticos", stage: "Negotiation", segment: "Skincare", sellerOrBrand: "Brand", gmvMonth: 50000, gmvYear: 600000, tiktok: false, shoppee: true, notes: "Proposta enviada — aceite dos 14%",
+      items: [
+        { itemId: "MLB3201847562", itemName: "Sérum Vitamina C Glowé 30ml", salesVolume: 1240, price: 89.90 },
+        { itemId: "MLB3201847891", itemName: "Hidratante Facial FPS 50 Glowé 60g", salesVolume: 870, price: 129.90 },
+        { itemId: "MLB3201853210", itemName: "Tônico Facial Glowé Ácido Hialurônico 120ml", salesVolume: 540, price: 74.90 },
+      ]
+    },
+    { id: "p2", name: "Dermavita", stage: "Setup", segment: "Dermocosméticos", sellerOrBrand: "Brand", gmvMonth: 30000, gmvYear: 360000, tiktok: false, shoppee: false, notes: "Documentação enviada",
+      items: [
+        { itemId: "MLB2987634510", itemName: "Sabonete Dermatológico Dermavita 150ml", salesVolume: 980, price: 45.90 },
+        { itemId: "MLB2987641023", itemName: "Creme Hidratante Dermavita Pele Seca 200g", salesVolume: 620, price: 79.90 },
+      ]
+    },
+    { id: "p3", name: "Bloom Cosméticos", stage: "Not initiated", segment: "Maquiagem", sellerOrBrand: "Brand", gmvMonth: 20000, gmvYear: 240000, tiktok: true, shoppee: false, notes: "Remarcar call pra quinta",
+      items: [
+        { itemId: "MLB4102938471", itemName: "Base Líquida Bloom Cobertura Total 30ml", salesVolume: 430, price: 99.90 },
+        { itemId: "MLB4102938652", itemName: "Paleta de Sombras Bloom Nude 12 cores", salesVolume: 310, price: 149.90 },
+      ]
+    },
+    { id: "p4", name: "Skincare Coreana X", stage: "Negotiation", segment: "Skincare", sellerOrBrand: "Brand", gmvMonth: 80000, gmvYear: 960000, tiktok: true, shoppee: true, notes: "",
+      items: [
+        { itemId: "MLB5023847291", itemName: "Sérum Snail Mucin 96% 100ml", salesVolume: 2100, price: 119.90 },
+        { itemId: "MLB5023847450", itemName: "Cushion SPF50+ PA++++ 15g", salesVolume: 1560, price: 189.90 },
+        { itemId: "MLB5023851002", itemName: "Toner BHA Exfoliante 200ml", salesVolume: 980, price: 94.90 },
+        { itemId: "MLB5023851378", itemName: "Máscara Coreana Hidratação 25ml (kit 5un)", salesVolume: 2840, price: 59.90 },
+      ]
+    },
+    { id: "p5", name: "BeautyBrand W", stage: "3P Go Live", segment: "Haircare", sellerOrBrand: "Brand", gmvMonth: 45000, gmvYear: 540000, tiktok: true, shoppee: false, notes: "Go live semana que vem",
+      items: [
+        { itemId: "MLB6198273041", itemName: "Shampoo Reconstrutor BeautyBrand W 300ml", salesVolume: 1320, price: 69.90 },
+        { itemId: "MLB6198273289", itemName: "Máscara Capilar Nutrição Intensa 500g", salesVolume: 890, price: 89.90 },
+        { itemId: "MLB6198280173", itemName: "Óleo Finalizador Brilho 60ml", salesVolume: 670, price: 54.90 },
+      ]
+    },
+    { id: "p6", name: "Cosméticos V", stage: "Onboarded", segment: "Skincare", sellerOrBrand: "Seller", gmvMonth: 20000, gmvYear: 240000, tiktok: false, shoppee: true, notes: "Onboarding concluído ✓",
+      items: [
+        { itemId: "MLB7341029857", itemName: "Kit Skincare Básico Cosméticos V (3 itens)", salesVolume: 760, price: 199.90 },
+        { itemId: "MLB7341030012", itemName: "Protetor Solar Facial FPS 60 50ml", salesVolume: 1100, price: 79.90 },
+      ]
+    },
   ],
 };
